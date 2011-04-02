@@ -6,7 +6,7 @@
 
 [general]
 #磁盘可用阀值百分比
-feedback = 55
+feedback = 20
 
 #文件大小,单位兆
 size = 10     
@@ -48,11 +48,10 @@ SP = 1
 #是否保留打包文件,1为保留
 SL = 0
 
-SftpHost = 127.0.0.1
-SftpPort = 22
+SftpHost = 10.127.26.241
+SftpPort = 58422
 SftpHostUser = root
-SftpHostPwd = defage
-
+SftpHostPwd = WD#sd7258
 
 [mail]
 #mail开关
@@ -62,4 +61,4 @@ smtpServer = mail.snda.com
 smtpUser = ptwarn@snda.com
 smtpPwd = 8ikju76yh
 fromMail = ptwarn@snda.com
-toMail = liutaihua@snda.com
+toMail = liutaihua@snda.com defage@gmail.com
