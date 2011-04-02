@@ -4,8 +4,8 @@ import string, os, sys
 
 
 cf = ConfigParser.ConfigParser()
-if os.path.exists('/etc/cldisky.conf'):
-    cf.read("/etc/cldisky.conf")
+if os.path.exists('/etc/cldisk.conf'):
+    cf.read("/etc/cldisk.conf")
 else:
     cf.read("%s/config.py"%sys.path[0])
 

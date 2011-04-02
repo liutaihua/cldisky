@@ -1,3 +1,4 @@
+README
 setup.cfg
 setup.py
 cldisky/__init__.py
