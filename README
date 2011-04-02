@@ -1,6 +1,0 @@
-install:
-    python setup.py install 
-
-use:
-    cldisky_confecho > /etc/cldisky.conf
-    cldisk
