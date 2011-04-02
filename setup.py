@@ -21,9 +21,9 @@ setup( name = 'cldisky',
             'cldisky/*',
         ]
     },
-#    install_requires=[
-#        'paramiko',
-#    ],
+    install_requires=[
+        'paramiko',
+    ],
     entry_points = {
         'console_scripts': [
             'cldisky_start = cldisky.scripts:cldisky_start',
