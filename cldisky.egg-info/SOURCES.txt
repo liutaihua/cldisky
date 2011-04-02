@@ -1,0 +1,15 @@
+setup.cfg
+setup.py
+cldisky/__init__.py
+cldisky/config.py
+cldisky/daemon.py
+cldisky/mail.py
+cldisky/readconf.py
+cldisky/scaning.py
+cldisky/scripts.py
+cldisky.egg-info/PKG-INFO
+cldisky.egg-info/SOURCES.txt
+cldisky.egg-info/dependency_links.txt
+cldisky.egg-info/entry_points.txt
+cldisky.egg-info/requires.txt
+cldisky.egg-info/top_level.txt
