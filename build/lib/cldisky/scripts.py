@@ -2,7 +2,7 @@ import os
 import sys
 import pkg_resources
 import sys
-from scaning import *
+from scaning import MyDaemon
 
 def confecho(out=sys.stdout):
     config = pkg_resources.resource_string(__name__, 'config.py')
@@ -17,5 +17,5 @@ def cldisky_stop():
     daemon.stop()
 
 
-#if __name__ == "__main__":
-#    cldisky()
+if __name__ == "__main__":
+    confecho()

@@ -38,4 +38,3 @@ smtpUser = cf.get('mail','smtpUser')
 smtpPwd = cf.get('mail','smtpPwd')
 fromMail = cf.get('mail','fromMail')
 toMail = cf.get('mail','toMail').split()
-
