@@ -26,7 +26,8 @@ setup( name = 'cldisky',
     ],
     entry_points = {
         'console_scripts': [
-            'cldisky = cldisky.scripts:cldisky',
+            'cldisky_start = cldisky.scripts:cldisky_start',
+            'cldisky_stop = cldisky.scripts:cldisky_stop',
             'cldisky_confecho = cldisky.scripts:confecho',
         ]
     },
