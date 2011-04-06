@@ -23,10 +23,10 @@ dist = setup( name = 'cldisky',
             'skel/*',
         ]
     },
-    #install_requires=[
-    #    'paramiko',
-    #],
-    requires = ['paramiko'],
+    install_requires=[
+        'paramiko',
+    ],
+    #requires = ['paramiko'],
     entry_points = {
         'console_scripts': [
             'cldisky_start = cldisky.scripts:cldisky_start',
