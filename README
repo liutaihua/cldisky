@@ -1,5 +1,5 @@
 Installation Instructions
-    python setup.py install
+    python setup.py install (request setuptools)
 
 How to?
     1. cldisky_confecho > /etc/cldisky.conf (requirement)
