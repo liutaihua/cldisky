@@ -1,5 +1,5 @@
 Installation Instructions
-    python setup.py install (request setuptools)
+    python setup.py install (request setuptools,You can use[CentOS5.0 platform]:yum install python-setuptools.noarch)
 
 How to?
     1. cldisky_confecho > /etc/cldisky.conf (requirement)
