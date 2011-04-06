@@ -1,0 +1,8 @@
+Installation Instructions
+    python setup.py install
+
+How to?
+    1. cldisky_confecho > /etc/cldisky.conf (requirement)
+    2. vim /etc/cldisky.conf,and configuration 
+    3. cldisky_start
+    4. cldisky_stop
