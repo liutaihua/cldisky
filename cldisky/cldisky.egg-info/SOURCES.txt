@@ -1,0 +1,15 @@
+README
+setup.py
+cldisky/__init__.py
+cldisky/confecho.py
+cldisky/daemon.py
+cldisky/mail.py
+cldisky/readconf.py
+cldisky/scaning.py
+cldisky/scripts.py
+cldisky/cldisky.egg-info/PKG-INFO
+cldisky/cldisky.egg-info/SOURCES.txt
+cldisky/cldisky.egg-info/dependency_links.txt
+cldisky/cldisky.egg-info/entry_points.txt
+cldisky/cldisky.egg-info/top_level.txt
+cldisky/skel/sample.conf
