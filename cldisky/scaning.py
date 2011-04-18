@@ -27,6 +27,8 @@ from readconf import *
 
 threshold = 8 + feedback
 callBackList = []
+tar_path = '/tmp/'
+ISOTIMEFORMAT='%Y%m%d%H%M'
 
 
 '''定义扫描'''
@@ -143,8 +145,7 @@ def tar(file_list, tar_name, compression='gz'):
         sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
         sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
         if True:
-            if not SL:
-                os.remove(dest_path)
+            os.remove(dest_path)
     return nameList
 
 

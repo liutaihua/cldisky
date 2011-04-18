@@ -14,18 +14,18 @@ feedback = cf.getint('general','feedback')
 size = cf.getint('general','size')
 intervalTime = cf.getint('general','intervalTime')
 wait_time = cf.getint('general','wait_time')
-tar_path = cf.get('general','tar_path')
+#tar_path = cf.get('general','tar_path')
 ScanPath = cf.get('general','ScanPath')
 RP = int(cf.get('general','RP'))
-ISOTIMEFORMAT = cf.get('general','ISOTIMEFORMAT')
+#ISOTIMEFORMAT = cf.get('general','ISOTIMEFORMAT')
 
 
-ext = cf.get('filter','ext').split()
+#ext = cf.get('filter','ext').split()
 exclude_path = cf.get('filter','exclude_path').split()
 reList = [i.strip() for i in cf.get('filter','reList').split('||')]
 
 SP = cf.getint('sftp','SP')
-SL = cf.getint('sftp','SL')
+#SL = cf.getint('sftp','SL')
 SftpHost = cf.get('sftp','SftpHost')
 SftpPort = cf.getint('sftp','SftpPort')
 SftpHostUser = cf.get('sftp','SftpHostUser')
