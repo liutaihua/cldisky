@@ -1,5 +1,0 @@
-[console_scripts]
-cldisky_confecho = cldisky.confecho:main
-cldisky_stop = cldisky.scripts:cldisky_stop
-cldisky_start = cldisky.scripts:cldisky_start
-
