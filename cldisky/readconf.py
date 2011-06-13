@@ -7,7 +7,7 @@ cf = ConfigParser.ConfigParser()
 if os.path.exists('/etc/cldisky.conf'):
     cf.read("/etc/cldisky.conf")
 else:
-	os.system('clidsky_confecho')
+    os.system('cldisky_confecho')
     cf.read("/etc/cldisky.conf")
 #    cf.read("skel/sample.conf")
 
