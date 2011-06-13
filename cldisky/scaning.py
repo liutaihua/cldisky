@@ -254,7 +254,7 @@ class MyDaemon(Daemon):
                     syslog.syslog('2:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
             else:
                 syslog.syslog("0:free disk percent is:%s, continue to sleep."%int(dl))
-            time.sleep(60)
+            time.sleep(300)
         
      
                 
