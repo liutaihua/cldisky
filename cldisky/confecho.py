@@ -1,11 +1,13 @@
 import pkg_resources
 import sys
+import os
 
-file = open('/etc/cldisky.conf','w')
 def main(out=sys.stdout):
     config = pkg_resources.resource_string(__name__, 'skel/sample.conf')
     out.write(config)
-	file.write(config)
-	file.close()
+	if not os.path.exists('/etc/cldisky.conf'):
+		file = open('/etc/cldisky.conf','w')
+		file.write(config)
+		file.close()
 
 
