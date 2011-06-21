@@ -5,11 +5,11 @@ import sys
 from scaning import MyDaemon
 
 def cldisky_start():
-    daemon = MyDaemon('/tmp/cldisky.pid')
+    daemon = MyDaemon('/var/run/cldisky.pid')
     daemon.start()
 
 def cldisky_stop():
-    daemon = MyDaemon('/tmp/cldisky.pid')
+    daemon = MyDaemon('/var/run/cldisky.pid')
     daemon.stop()
 
 
