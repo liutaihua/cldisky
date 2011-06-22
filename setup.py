@@ -29,8 +29,7 @@ dist = setup( name = 'cldisky',
     #requires = ['paramiko'],
     entry_points = {
         'console_scripts': [
-            'cldisky_start = cldisky.scripts:cldisky_start',
-            'cldisky_stop = cldisky.scripts:cldisky_stop',
+            'cldisky = cldisky.scripts:cldisky',
             'cldisky_confecho = cldisky.confecho:main',
         ]
     },
