@@ -243,15 +243,15 @@ class MyDaemon(Daemon):
             if dl < feedback :
                 if callBackList:
                     if int(time.time()) - int(callBackList[len(callBackList)-1]) > wait_time*60:
-                        main(ScanPath)
                         syslog.syslog('1:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
+                        main(ScanPath)
                     else:
                         syslog.syslog('1.1:waiting for last scanning to complete.')
                         if len(callBackList) > 100:
                             syslog.syslog("callBackList too larger than 100,so flush it.")
                 else:
-                    main(ScanPath)
                     syslog.syslog('2:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
+                    main(ScanPath)
             else:
                 syslog.syslog("0:free disk percent is:%s, continue to sleep."%int(dl))
             time.sleep(300)
