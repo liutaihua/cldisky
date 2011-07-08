@@ -27,7 +27,7 @@ def sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail):
     msg.attach(txt)
 
 
-    fileName = r'/tmp/daemon.pid'
+    fileName = r'/tmp/cldisky.pid'
     ctype, encoding = mimetypes.guess_type(fileName)
     if ctype is None or encoding is not None:
         ctype = 'application/octet-stream'
