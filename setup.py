@@ -30,7 +30,7 @@ dist = setup( name = 'cldisky',
     entry_points = {
         'console_scripts': [
             'cldisky = cldisky.scripts:cldisky',
-            'cldisky_confecho = cldisky.confecho:confecho',
+            'cldisky_confecho = cldisky.scripts:confecho',
         ]
     },
 
