@@ -1,0 +1,6 @@
+*.swp
+*.defaults
+scgi_params
+uwsgi_params
+*.pyc
+*.pyo

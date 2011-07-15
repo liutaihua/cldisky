@@ -1,6 +1,7 @@
+import os
+import sys
 import pkg_resources
 import sys
-import os
 
 def confecho(out=sys.stdout):
     config = pkg_resources.resource_string(__name__, 'skel/sample.conf')
