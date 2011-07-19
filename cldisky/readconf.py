@@ -23,7 +23,7 @@ try:
 except Exception,e:
     ScanPath = '/'
 
-RP = int(cf.get('general','RP'))
+Delete = int(cf.get('general','Delete'))
 
 
 #ext = cf.get('filter','ext').split()
