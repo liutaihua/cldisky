@@ -25,22 +25,23 @@ from readconf import *
 
 
 
-threshold = 8 + feedback
+threshold = 8 + avail
 callBackList = []
 tar_path = '/tmp/'
-ISOTIMEFORMAT='%Y%m%d%H%M'
+ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
+dest_exclude_path = ['/etc', '/var', '/mnt', '/bin', '/sbin', '/boot', '/dev', '/lib', 'lib64', '/misc', '/lost+found', '/media', '/proc', '/root', '/selinux', '/srv', '/sys', '/tmp', '/usr']
 
 
 '''定义扫描'''
 class ScanThread(threading.Thread):
-    def __init__(self, no, path, size):
+    def __init__(self, path, size):
         threading.Thread.__init__(self)
-        self.no = no
+        #self.no = no
         self.path = path
         self.size = size
         self.txtfile_list = []
         self.match_list = []
-        self.tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) +  no
+        self.tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
 
 
     def run(self):
@@ -61,17 +62,16 @@ class ScanThread(threading.Thread):
             '''
             进行config内指定的re匹配规则进行匹配'''
             ReMatch(txtfile_list, match_list)
-        if RP:
-            if match_list:
+        if match_list:
+            if Delete:
                 for file in match_list:
                     os.remove(file)
                     syslog.syslog('direct delete file: %s'%file)
-        else:
-            if match_list:
+            else :
                 tar(match_list, self.tar_name)
                 callBcak()
-            else :
-                syslog.syslog("%s is empty."%self.path)
+        else:
+            syslog.syslog("%s is empty."%self.path)
 
 def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
@@ -165,17 +165,20 @@ def check_disk_used():
 def main(path='/'):
     rootList = []
     threadList = []
+    if exclude_path:
+        for i in exclude_path:
+            dest_exclude_path.append(i)
     for dir in os.listdir(path):
         tmp_path = ''.join(['/'+ path + '/' + dir])
         if os.path.isdir(tmp_path):
             tmp_dir = ''.join(['/'+ path + dir])
-            if tmp_dir not in exclude_path:
+            if tmp_dir not in dest_exclude_path:
                 dest_dir = os.path.join(path,dir)
                 rootList.append(dest_dir)
     for i in range(len(rootList)):
-        tmp_no = rootList[i].split('/')
-        no = path.replace('/','-') + '-' + tmp_no[len(tmp_no)-1]
-        thread = ScanThread(no,rootList[i],size)
+        #tmp_no = rootList[i].split('/')
+        #no = path.replace('/','-') + '-' + tmp_no[len(tmp_no)-1]
+        thread = ScanThread(rootList[i],size)
         threadList.append(thread)
     for TH in threadList:
         TH.start()
@@ -240,7 +243,7 @@ class MyDaemon(Daemon):
         syslog.openlog('ScanDisk',syslog.LOG_PID)
         while True:
             dl = check_disk_used()
-            if dl < feedback :
+            if dl < avail :
                 if callBackList:
                     if int(time.time()) - int(callBackList[len(callBackList)-1]) > wait_time*60:
                         syslog.syslog('1:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
