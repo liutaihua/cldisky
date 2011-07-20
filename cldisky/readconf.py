@@ -39,7 +39,7 @@ try:
         for i in reList:
             dest_reList.append(i)
 except Exception, e:
-    dest_reList = ['.*\.log']
+    dest_reList = ['.*\.log(\.)?.*']
 SP = cf.getint('sftp','SP')
 SftpHost = cf.get('sftp','SftpHost')
 SftpPort = cf.getint('sftp','SftpPort')

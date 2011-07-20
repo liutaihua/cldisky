@@ -54,7 +54,9 @@ class ScanThread(threading.Thread):
                 fileTime = os.stat(int_file).st_mtime
                 '''
                 进行时间间隔匹配过滤'''
-                if float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*3600)) :
+                if check_disk_used() < 1:
+                    file_list.append(int_file)
+                elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*3600)) :
                     file_list.append(int_file)
         if file_list:
             IsTxtFile(file_list, txtfile_list)
@@ -98,7 +100,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
         
 def ReMatch(file_list, match_list):
     for file in file_list:
-        for COMPILE in reList:
+        for COMPILE in dest_reList:
             p = re.compile(COMPILE)
             result = p.match(file)
             if result:
@@ -171,7 +173,7 @@ def main(path='/'):
     for dir in os.listdir(path):
         tmp_path = ''.join(['/'+ path + '/' + dir])
         if os.path.isdir(tmp_path):
-            tmp_dir = ''.join(['/'+ path + dir])
+            tmp_dir = ''.join([path + dir])
             if tmp_dir not in dest_exclude_path:
                 dest_dir = os.path.join(path,dir)
                 rootList.append(dest_dir)
