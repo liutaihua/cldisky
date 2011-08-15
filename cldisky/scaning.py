@@ -67,8 +67,13 @@ class ScanThread(threading.Thread):
         if match_list:
             if Delete:
                 for file in match_list:
-                    os.remove(file)
-                    syslog.syslog('direct delete file: %s'%file)
+                    if check_disk_used() < threshold:
+                        try:
+                            os.remove(file)
+                            syslog.syslog('delete file: %s'%file)
+                        except Exception,e:
+                            syslog.syslog(e)
+                    else:break
             else :
                 tar(match_list, self.tar_name)
                 callBcak()
