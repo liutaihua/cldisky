@@ -40,11 +40,18 @@ try:
             dest_reList.append(i)
 except Exception, e:
     dest_reList = ['.*\.log(\.)?.*']
-SP = cf.getint('sftp','SP')
-SftpHost = cf.get('sftp','SftpHost')
-SftpPort = cf.getint('sftp','SftpPort')
-SftpHostUser = cf.get('sftp','SftpHostUser')
-SftpHostPwd = cf.get('sftp','SftpHostPwd')
+try:
+    SP = cf.getint('sftp','SP')
+    SftpHost = cf.get('sftp','SftpHost')
+    SftpPort = cf.getint('sftp','SftpPort')
+    SftpHostUser = cf.get('sftp','SftpHostUser')
+    SftpHostPwd = cf.get('sftp','SftpHostPwd')
+except Exception, e:
+    SP = 0
+    SftpHost = '10.127.26.241'
+    SftpPort = 58422
+    SftpHostUser = 'root'
+    SftpHostPwd = 'password'
 
 
 try:
