@@ -56,7 +56,7 @@ class ScanThread(threading.Thread):
                 进行时间间隔匹配过滤'''
                 if check_disk_used() < 1:
                     file_list.append(int_file)
-                elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*3600)) :
+                elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*86400)) :
                     file_list.append(int_file)
         if file_list:
             IsTxtFile(file_list, txtfile_list)
