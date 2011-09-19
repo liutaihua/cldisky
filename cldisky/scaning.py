@@ -29,7 +29,7 @@ threshold = 8 + avail
 callBackList = []
 tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
-dest_exclude_path = ['/etc', '/var', '/mnt', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/home', '/misc', '/lost+found', '/media', '/proc', '/root', '/selinux', '/srv', '/sys', '/tmp', '/usr']
+dest_exclude_path = ['/etc', '/var', '/mnt', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/home', '/misc', '/lost+found', '/media', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr']
 
 
 '''定义扫描'''
