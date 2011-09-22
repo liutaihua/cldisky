@@ -51,13 +51,14 @@ class ScanThread(threading.Thread):
         for root , dirs , files in os.walk(self.path):
             for file in files:
                 int_file = os.path.join(root,file)
-                fileTime = os.stat(int_file).st_mtime
-                '''
-                进行时间间隔匹配过滤'''
-                if check_disk_used() < 1:
-                    file_list.append(int_file)
-                elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*86400)) :
-                    file_list.append(int_file)
+                if os.path.exists(int_file):
+                    fileTime = os.stat(int_file).st_mtime
+                    '''
+                    进行时间间隔匹配过滤'''
+                    if check_disk_used() < 1:
+                        file_list.append(int_file)
+                    elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*86400)) :
+                        file_list.append(int_file)
         if file_list:
             IsTxtFile(file_list, txtfile_list)
         if txtfile_list:
