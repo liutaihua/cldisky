@@ -14,7 +14,8 @@ import os
 import sys
 import syslog
 import time
-import threading
+import threading, Queue
+from threading import Thread
 import tarfile
 import statvfs
 from daemon import Daemon
@@ -28,79 +29,117 @@ from readconf import *
 threshold = 8 + avail
 callBackList = []
 tar_path = '/tmp/'
-ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
-dest_exclude_path = ['/etc', '/var', '/mnt', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/home', '/misc', '/lost+found', '/media', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr']
+ISOTIMEFORMAT='%Y-%m-%d-%H-%M'
+dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr', '/run', '/cdrom', '/media', '/lost+found']
 
 
-'''定义扫描'''
-class ScanThread(threading.Thread):
-    def __init__(self, path, size):
-        threading.Thread.__init__(self)
-        #self.no = no
-        self.path = path
-        self.size = size
-        self.txtfile_list = []
-        self.match_list = []
-        self.tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
 
+'''work thread pool'''
+# working thread  
+class Worker(Thread):  
+    worker_count = 0  
+    def __init__( self, workQueue, resultQueue, timeout = 0, **kwds):  
+        Thread.__init__( self, **kwds )  
+        self.id = Worker.worker_count  
+        Worker.worker_count += 1  
+        self.setDaemon( True )  
+        self.workQueue = workQueue  
+        self.resultQueue = resultQueue  
+        self.timeout = timeout  
+  
+    def run( self ):  
+        ''' the get-some-work, do-some-work main loop of worker threads '''  
+        while True:  
+            try:  
+                callable, args, kwds = self.workQueue.get(timeout=self.timeout)  
+                res = callable(*args, **kwds)  
+                #print "worker[%2d]: %s" % (self.id, str(res) )  
+                self.resultQueue.put( res )  
+            except Queue.Empty:  
+                break  
+            #except :  
+                #print 'worker[%2d]' % self.id, sys.exc_info()[:2]  
+            #    pass
+                  
+class WorkerManager:  
+    def __init__( self, num_of_workers=10, timeout = 0):  
+        self.workQueue = Queue.Queue()  
+        self.resultQueue = Queue.Queue()  
+        self.workers = []  
+        self.timeout = timeout  
+        self._recruitThreads( num_of_workers )  
+  
+    def _recruitThreads( self, num_of_workers ):  
+        for i in range( num_of_workers ):  
+            worker = Worker( self.workQueue, self.resultQueue, self.timeout )  
+            self.workers.append(worker)  
+  
+    def start(self):  
+        for worker in self.workers:  
+            worker.start()  
+  
+    def wait_for_complete( self):  
+        # ...then, wait for each of them to terminate:  
+        while len(self.workers):  
+            worker = self.workers.pop()  
+            worker.join( )  
+            if worker.isAlive() and not self.workQueue.empty():  
+                self.workers.append( worker )  
+        print "All jobs are are completed."  
+  
+    def add_job( self, callable, *args, **kwds ):  
+        self.workQueue.put( (callable, args, kwds) )  
+  
+    def get_result( self, *args, **kwds ):  
+        return self.resultQueue.get( *args, **kwds )
 
-    def run(self):
-        file_list = []
-        txtfile_list = self.txtfile_list
-        match_list = self.match_list
-        for root , dirs , files in os.walk(self.path):
-            for file in files:
-                int_file = os.path.join(root,file)
-                if os.path.exists(int_file):
-                    fileTime = os.stat(int_file).st_mtime
-                    '''
-                    进行时间间隔匹配过滤'''
-                    if check_disk_used() < 1:
-                        file_list.append(int_file)
-                    elif float(os.path.getsize(int_file))/1024/1024 > self.size and (int(fileTime) < int(time.time() - int(intervalTime)*86400)) :
-                        file_list.append(int_file)
-        if file_list:
-            IsTxtFile(file_list, txtfile_list)
-        if txtfile_list:
-            '''
-            进行config内指定的re匹配规则进行匹配'''
-            ReMatch(txtfile_list, match_list)
-        if match_list:
-            if Delete:
-                for file in match_list:
-                    if check_disk_used() < threshold:
-                        try:
-                            os.remove(file)
-                            syslog.syslog('delete file: %s'%file)
-                        except Exception,e:
-                            syslog.syslog(e)
-                    else:break
-            else :
-                tar(match_list, self.tar_name)
-                callBcak()
-        else:
-            syslog.syslog("%s is empty."%self.path)
 
 def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
-        s = open(file).read(blocksize)
-        if "\0" in s:
-            continue
-        if not s:  # Empty files are considered text
+        if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
+            tar = tarfile.TarFile.open(file)
+            tarFileList = tar.getnames()
+            allTarFile_num = len(tarFileList)
+            tar_text_file_num = 0
+            
+            for f in tarFileList:
+                data = tar.extractfile(f).read(blocksize)
+                if "\0" in data:
+                    continue
+                if not data:  # Empty files are considered text
+                    tar_text_file_num += 1
+                    continue
+
+                # Get the non-text characters (maps a character to itself then
+                # use the 'remove' option to get rid of the text characters.)
+                t = data.translate(_null_trans, text_characters)
+
+                # If more than 30% non-text characters, then
+                # this is considered a binary file
+                if len(t)/len(data) > 0.30:
+                    continue
+                tar_text_file_num += 1
+            if float(tar_text_file_num)/float(allTarFile_num) > 0.8:
+                txtfile_list.append(file)
+        else:
+            s = open(file).read(blocksize)
+            if "\0" in s:
+                continue
+            if not s:  # Empty files are considered text
+                txtfile_list.append(file)
+                continue
+
+            # Get the non-text characters (maps a character to itself then
+            # use the 'remove' option to get rid of the text characters.)
+            t = s.translate(_null_trans, text_characters)
+
+            # If more than 30% non-text characters, then
+            # this is considered a binary file
+            if len(t)/len(s) > 0.30:
+                continue
             txtfile_list.append(file)
-            continue
-
-        # Get the non-text characters (maps a character to itself then
-        # use the 'remove' option to get rid of the text characters.)
-        t = s.translate(_null_trans, text_characters)
-
-        # If more than 30% non-text characters, then
-        # this is considered a binary file
-        if len(t)/len(s) > 0.30:
-            continue
-        txtfile_list.append(file)
     return txtfile_list
 
         
@@ -116,7 +155,7 @@ def ReMatch(file_list, match_list):
 
 
 '''打包压缩'''
-def tar(file_list, tar_name, compression='gz'):
+def Tar(file_list, tar_name, compression='gz'):
     if compression:
         dest_ext = '.' + compression
     else :
@@ -145,16 +184,7 @@ def tar(file_list, tar_name, compression='gz'):
             out.close()
             break
     out.close()
-    if SP:
-        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
-        LocalPath = dest_path
-        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  dest_name
-
-        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
-        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
-        if True:
-            os.remove(dest_path)
-    return nameList
+    return dest_path
 
 
 '''磁盘check'''
@@ -169,29 +199,77 @@ def check_disk_used():
     return idle
 
 
+def process_sub_path(scan_path):
+    txtfile_list = []
+    match_list = []
+    tmp_file_list = []
+    #tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) + "-" + os.path.basename(scan_path)
+
+    for root, dirs, files in os.walk(scan_path):
+        for file in files:
+            fullFilePath = os.path.join(root, file)
+            if os.path.exists(fullFilePath):
+                fileTime = os.stat(fullFilePath).st_mtime
+                if check_disk_used() < 1 and float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - 3:
+                    tmp_file_list.append(fullFilePath)
+                elif float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - int(intervalTime)*8:
+                    tmp_file_list.append(fullFilePath)
+    if tmp_file_list:
+        IsTxtFile(tmp_file_list, txtfile_list)
+
+    if txtfile_list and ReList:
+        ReMatch(txtfile_list, match_list)
+    else: match_list = txtfile_list
+  
+    if Delete:
+        for file in match_list:
+            if check_disk_used() < threshold:
+                try:
+                    os.remove(file)
+                    syslog.syslog('delete file: %s'%file)
+                except Exception,e:
+                    syslog.syslog(e)
+            else:break
+        sys.exit(0)
+    else:
+        map(lambda x:file_list.append(x), [i for i in match_list])
+   
+       
+def tar_process(file_list):
+    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
+    
+    dest_path = Tar(file_list, tar_name)
+    if SP:
+        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
+        LocalPath = dest_path
+        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  tar_name + '.tar.gz'
+        
+        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
+        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
+        if True:
+            os.remove(dest_path)
+
+    
+
 
 def main(path='/'):
-    rootList = []
-    threadList = []
-    if exclude_path:
-        for i in exclude_path:
-            dest_exclude_path.append(i)
-    for dir in os.listdir(path):
-        tmp_path = ''.join(['/'+ path + '/' + dir])
-        if os.path.isdir(tmp_path):
-            tmp_dir = ''.join([path + dir])
-            if tmp_dir not in dest_exclude_path:
-                dest_dir = os.path.join(path,dir)
-                rootList.append(dest_dir)
-    for i in range(len(rootList)):
-        #tmp_no = rootList[i].split('/')
-        #no = path.replace('/','-') + '-' + tmp_no[len(tmp_no)-1]
-        thread = ScanThread(rootList[i],size)
-        threadList.append(thread)
-    for TH in threadList:
-        TH.start()
-    if SM:
-        sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
+    map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
+    _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
+    dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
+
+    global file_list 
+    file_list = []
+    wm = WorkerManager(17)
+    for scan_path in dir_list:
+        wm.add_job(process_sub_path, scan_path)
+    wm.start()
+    wm.wait_for_complete()
+   
+    tar_process(file_list) 
+
+    if SM:sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
+
+
 
 def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
     import paramiko
@@ -246,6 +324,9 @@ def callBack():
 
 
 '''daemon 类'''
+
+if __name__ == "__main__":
+    main()
 class MyDaemon(Daemon):
     def run(self):
         syslog.openlog('ScanDisk',syslog.LOG_PID)

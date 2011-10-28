@@ -25,7 +25,6 @@ except Exception,e:
 
 Delete = int(cf.get('general','Delete'))
 
-
 #ext = cf.get('filter','ext').split()
 try:
     exclude_path = cf.get('filter','exclude_path').split()
@@ -36,8 +35,7 @@ try:
     dest_reList = ['(.*\\.log)\\.\\d{4}-\\d{1,2}-\\d{1,2}(\\.\\d{1,2})?', '.*\\d{4}-\\d{2}-\\d{1,2}\\.tar\\.gz', '.*\\d{4}-\\d{2}-\\d{2}(-\\d{1,2})?\\.log']
     reList = [i.strip() for i in cf.get('filter','reList').split('||')]
     if reList:
-        for i in reList:
-            dest_reList.append(i)
+        map(lambda x:dest_reList.append(i), [i for i in reList])
 except Exception, e:
     dest_reList = ['.*\.log(\.)?.*']
 try:
