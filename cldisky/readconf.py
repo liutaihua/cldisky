@@ -33,11 +33,13 @@ except Exception,e :
 
 try:
     dest_reList = ['(.*\\.log)\\.\\d{4}-\\d{1,2}-\\d{1,2}(\\.\\d{1,2})?', '.*\\d{4}-\\d{2}-\\d{1,2}\\.tar\\.gz', '.*\\d{4}-\\d{2}-\\d{2}(-\\d{1,2})?\\.log']
+    reList = []
     reList = [i.strip() for i in cf.get('filter','reList').split('||')]
     if reList:
         map(lambda x:dest_reList.append(i), [i for i in reList])
 except Exception, e:
     dest_reList = ['.*\.log(\.)?.*']
+
 try:
     SP = cf.getint('sftp','SP')
     SftpHost = cf.get('sftp','SftpHost')

@@ -12,7 +12,7 @@ def cldisky():
         print "commands: start|stop|restart"
         sys.exit(0)
 
-    daemon = MyDaemon('/tmp/cldisky.pid')
+    daemon = MyDaemon('/var/run/cldisky.pid')
     if sys.argv[1] == 'start':
         daemon.start()
     elif sys.argv[1] == 'stop':

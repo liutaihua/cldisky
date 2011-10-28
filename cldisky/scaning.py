@@ -14,6 +14,7 @@ import os
 import sys
 import syslog
 import time
+import types
 import threading, Queue
 from threading import Thread
 import tarfile
@@ -99,12 +100,23 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     _null_trans = string.maketrans("", "")
     for file in file_list:
         if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
-            tar = tarfile.TarFile.open(file)
+            try:
+                tar = tarfile.TarFile.open(file)
+            except Exception,e:
+                txtfile_list.append(file)
+                syslog.syslog(e)
+                continue
             tarFileList = tar.getnames()
             allTarFile_num = len(tarFileList)
             tar_text_file_num = 0
-            
+
             for f in tarFileList:
+                try:
+                    _type = type(tar.extractfile(f))
+                except Exception,e:
+                   continue
+                if _type is types.NoneType: continue
+
                 data = tar.extractfile(f).read(blocksize)
                 if "\0" in data:
                     continue
@@ -124,10 +136,12 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             if float(tar_text_file_num)/float(allTarFile_num) > 0.8:
                 txtfile_list.append(file)
         else:
+            syslog.syslog("opop")
             s = open(file).read(blocksize)
             if "\0" in s:
                 continue
             if not s:  # Empty files are considered text
+                syslog.syslog("opop2")
                 txtfile_list.append(file)
                 continue
 
@@ -138,6 +152,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             # If more than 30% non-text characters, then
             # this is considered a binary file
             if len(t)/len(s) > 0.30:
+                syslog.syslog("opop3")
                 continue
             txtfile_list.append(file)
     return txtfile_list
@@ -210,14 +225,14 @@ def process_sub_path(scan_path):
             fullFilePath = os.path.join(root, file)
             if os.path.exists(fullFilePath):
                 fileTime = os.stat(fullFilePath).st_mtime
-                if check_disk_used() < 1 and float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - 3:
+                if check_disk_used() < 1 and float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - 3600:
                     tmp_file_list.append(fullFilePath)
-                elif float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - int(intervalTime)*8:
+                elif float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - int(intervalTime)*86400:
                     tmp_file_list.append(fullFilePath)
     if tmp_file_list:
         IsTxtFile(tmp_file_list, txtfile_list)
 
-    if txtfile_list and ReList:
+    if txtfile_list and reList:
         ReMatch(txtfile_list, match_list)
     else: match_list = txtfile_list
   
@@ -325,8 +340,8 @@ def callBack():
 
 '''daemon 类'''
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#   main()
 class MyDaemon(Daemon):
     def run(self):
         syslog.openlog('ScanDisk',syslog.LOG_PID)
@@ -335,14 +350,14 @@ class MyDaemon(Daemon):
             if dl < avail :
                 if callBackList:
                     if int(time.time()) - int(callBackList[len(callBackList)-1]) > wait_time*60:
-                        syslog.syslog('1:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
+                        syslog.syslog('1:free disk percent is:%s start to scanning disk.(the file that %s days from now.)'%(int(dl),intervalTime))
                         main(ScanPath)
                     else:
                         syslog.syslog('1.1:waiting for last scanning to complete.')
                         if len(callBackList) > 100:
                             syslog.syslog("callBackList too larger than 100,so flush it.")
                 else:
-                    syslog.syslog('2:free disk percent is:%s start to scanning disk.(the file that %s hour from now.)'%(int(dl),intervalTime))
+                    syslog.syslog('2:free disk percent is:%s start to scanning disk.(the file that %s days from now.)'%(int(dl),intervalTime))
                     main(ScanPath)
             else:
                 syslog.syslog("0:free disk percent is:%s, continue to sleep."%int(dl))
