@@ -136,12 +136,10 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             if float(tar_text_file_num)/float(allTarFile_num) > 0.8:
                 txtfile_list.append(file)
         else:
-            syslog.syslog("opop")
             s = open(file).read(blocksize)
             if "\0" in s:
                 continue
             if not s:  # Empty files are considered text
-                syslog.syslog("opop2")
                 txtfile_list.append(file)
                 continue
 
@@ -152,7 +150,6 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             # If more than 30% non-text characters, then
             # this is considered a binary file
             if len(t)/len(s) > 0.30:
-                syslog.syslog("opop3")
                 continue
             txtfile_list.append(file)
     return txtfile_list
