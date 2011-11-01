@@ -68,3 +68,6 @@ except Exception, e:
     smtpPwd = '8ikju76yh'
     fromMail = 'ptwarn@snda.com'
     toMail = ['defage@gmail.com', 'liutaihua@snda.com']
+
+if not SP and not Delete:
+    print "WARNING! Normal,In the absence of none sftp in the case, it's best not to process Tar."
