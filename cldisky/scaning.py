@@ -30,7 +30,7 @@ from readconf import *
 threshold = 8 + avail
 callBackList = []
 tar_path = '/tmp/'
-ISOTIMEFORMAT='%Y-%m-%d-%H-%M'
+ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr', '/run', '/cdrom', '/media', '/lost+found']
 
 
@@ -99,7 +99,9 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
-        if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
+        if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(file)):
+            continue
+        elif os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
             try:
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
