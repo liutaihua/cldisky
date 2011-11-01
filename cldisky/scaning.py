@@ -99,9 +99,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
-        if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(file)):
-            continue
-        elif os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
+        if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
             try:
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
@@ -184,7 +182,9 @@ def Tar(file_list, tar_name, compression='gz'):
     dest_path = '%s/'%tar_path + dest_name
     out = tarfile.TarFile.open(dest_path, 'w'+dest_cmp)
     for tar in file_list:
-        if check_disk_used() < threshold :
+        if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(file)):
+            continue
+        elif check_disk_used() < threshold :
             callBack()
             syslog.syslog("tar file and to delete: %s"%tar)
             out.add(tar)
@@ -217,7 +217,6 @@ def process_sub_path(scan_path):
     txtfile_list = []
     match_list = []
     tmp_file_list = []
-    #tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) + "-" + os.path.basename(scan_path)
 
     for root, dirs, files in os.walk(scan_path):
         for file in files:
