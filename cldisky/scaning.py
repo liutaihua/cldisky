@@ -234,7 +234,7 @@ def process_sub_path(scan_path):
         ReMatch(txtfile_list, match_list)
     else: match_list = txtfile_list
   
-    if Delete:
+    if Delete and match_list:
         for file in match_list:
             if check_disk_used() < threshold:
                 try:
@@ -244,7 +244,7 @@ def process_sub_path(scan_path):
                     syslog.syslog(e)
             else:break
         sys.exit(0)
-    else:
+    elif match_list:
         map(lambda x:file_list.append(x), [i for i in match_list])
    
        
