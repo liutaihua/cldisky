@@ -234,7 +234,7 @@ def process_sub_path(scan_path):
         ReMatch(txtfile_list, match_list)
     else: match_list = txtfile_list
   
-    if Delete and match_list:
+    if Delete and match_list or check_disk_used() < 1 and match_list:
         for file in match_list:
             if check_disk_used() < threshold:
                 try:
