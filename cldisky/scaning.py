@@ -29,7 +29,7 @@ from readconf import *
 
 threshold = 8 + avail
 callBackList = []
-tar_path = '/tmp/'
+#tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr', '/run', '/cdrom', '/media', '/lost+found']
 

@@ -23,6 +23,12 @@ try:
 except Exception,e:
     ScanPath = '/'
 
+try:
+    tar_path = cf.get('general', 'tar_path')
+except: Exception, e:
+    tar_path = '/tmp'
+
+
 Delete = int(cf.get('general','Delete'))
 
 #ext = cf.get('filter','ext').split()
