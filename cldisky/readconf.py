@@ -25,7 +25,7 @@ except Exception,e:
 
 try:
     tar_path = cf.get('general', 'tar_path')
-except: Exception, e:
+except Exception, e:
     tar_path = '/tmp'
 
 
