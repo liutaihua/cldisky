@@ -218,6 +218,9 @@ def process_sub_path(scan_path):
     match_list = []
     tmp_file_list = []
 
+    timeFileDict = {}
+    destFileList = []
+
     for root, dirs, files in os.walk(scan_path):
         for file in files:
             fullFilePath = os.path.join(root, file)
@@ -232,9 +235,13 @@ def process_sub_path(scan_path):
 
     if txtfile_list:
         ReMatch(txtfile_list, match_list)
+
+    for file in match_list:
+        timeFileDict[file] = os.stat(file).st_mtime
+    map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
   
-    if Delete and match_list or check_disk_used() < 1 and match_list:
-        for file in match_list:
+    if Delete and destFileList:
+        for file in destFileList:
             if check_disk_used() < threshold:
                 try:
                     os.remove(file)
@@ -243,8 +250,8 @@ def process_sub_path(scan_path):
                     syslog.syslog(e)
             else:break
         sys.exit(0)
-    elif match_list:
-        map(lambda x:file_list.append(x), [i for i in match_list])
+    elif destFileList:
+        map(lambda x:file_list.append(x), [i for i in destFileList])
    
        
 def tar_process(file_list):
