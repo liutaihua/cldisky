@@ -325,8 +325,9 @@ def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port =
         time.sleep(3)
         sftp.close()
         ssh.close()
-    except paramiko.SSHException:
-     ssh.close()
+    except Exception, e:
+        syslog.syslog(e)
+        ssh.close()
 
 
 def getLocalIp():
