@@ -268,8 +268,6 @@ def tar_process(file_list):
         if True:
             os.remove(dest_path)
 
-    
-
 
 def main(path='/'):
     map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
@@ -285,9 +283,11 @@ def main(path='/'):
     wm.wait_for_complete()
    
     tar_process(file_list) 
-
-    if SM:sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
-
+    if SM:
+        try:
+            sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
+        except Exception, e:
+            syslog.syslog("sendEmail error: %s"%e)
 
 
 def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
@@ -367,7 +367,3 @@ class MyDaemon(Daemon):
             else:
                 syslog.syslog("0:Disk Idle:%s, continue to sleep."%int(dl))
             time.sleep(300)
-        
-     
-                
-
