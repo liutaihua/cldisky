@@ -99,7 +99,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
-        if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
+        if filter(lambda x:file.endswith(x), [".tar.gz",".gz",".tar",".tar.bz2"]):
             try:
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
