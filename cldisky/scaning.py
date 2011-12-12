@@ -240,7 +240,6 @@ def get_opened_fd():
             continue
     return opened_list
 
-
 def process_sub_path(scan_path):
     txtfile_list = []
     match_list = []
@@ -252,12 +251,8 @@ def process_sub_path(scan_path):
     for root, dirs, files in os.walk(scan_path):
         for file in files:
             fullFilePath = os.path.join(root, file)
-            if os.path.exists(fullFilePath):
-                fileTime = os.stat(fullFilePath).st_mtime
-                if check_disk_used() < 1 and float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - 3600:
-                    tmp_file_list.append(fullFilePath)
-                elif float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - int(intervalTime)*86400:
-                    tmp_file_list.append(fullFilePath)
+            if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
+                tmp_file_list.append(fullFilePath)
     if tmp_file_list:
         IsTxtFile(tmp_file_list, txtfile_list)
 
@@ -269,8 +264,10 @@ def process_sub_path(scan_path):
     map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
 
     for file in destFileList:
-        if file in get_opened_fd():
+        if file in get_opened_fd() and check_disk_used() < 3:
             try:
+                syslog.syslog("Flush file:%s"%file)
+                destFileList.remove(file)
                 open(file,'w').flush()
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
@@ -278,14 +275,18 @@ def process_sub_path(scan_path):
   
     if Delete and destFileList:
         for file in destFileList:
-            if check_disk_used() < threshold:
+            if check_disk_used() < 3 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
                 try:
                     os.remove(file)
                     syslog.syslog('delete file: %s'%file)
                 except Exception,e:
                     syslog.syslog(e)
-            else:break
-        sys.exit(0)
+            elif check_disk_used() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
+                try:
+                    os.remove(file)
+                    syslog.syslog('delete file: %s'%file)
+                except Exception,e:
+                    syslog.syslog(e)
     elif destFileList:
         map(lambda x:file_list.append(x), [i for i in destFileList])
    
