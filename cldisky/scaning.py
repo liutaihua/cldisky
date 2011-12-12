@@ -319,7 +319,8 @@ def main(path='/'):
     wm.start()
     wm.wait_for_complete()
    
-    tar_process(file_list) 
+    if not Delete:
+        tar_process(file_list) 
     if SM:
         try:
             sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
