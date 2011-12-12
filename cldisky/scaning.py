@@ -209,8 +209,36 @@ def check_disk_used():
     used = total - available
     usage = (float(used)/float(total))*100
     idle = (float(available)/float(total))*100
-   
     return idle
+
+def get_opened_fd():
+    pids=os.listdir('/proc')
+    open_files = {}
+    fd_list = []
+    opened_list = []
+    for pid in sorted(pids):
+        try:
+            int(pid)
+        except ValueError:
+            continue
+        fd_dir=os.path.join('/proc', pid, 'fd')
+        try:
+            fds = os.listdir(fd_dir)
+        except OSError:
+            continue
+        for file in fds:
+            try:
+                link=os.readlink(os.path.join(fd_dir, file))
+            except OSError:
+                continue
+            fd_list.append(link)
+    for file in fd_list:
+        try:
+            if os.path.exists(file):
+                opened_list.append(file)
+        except Exception, e:
+            continue
+    return opened_list
 
 
 def process_sub_path(scan_path):
@@ -239,6 +267,14 @@ def process_sub_path(scan_path):
     for file in match_list:
         timeFileDict[file] = os.stat(file).st_mtime
     map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
+
+    for file in destFileList:
+        if file in get_opened_fd():
+            try:
+                open(file,'w').flush()
+            except Exception, e:
+                syslog.syslog("Flush file:%s break some error"%file)
+                continue
   
     if Delete and destFileList:
         for file in destFileList:
