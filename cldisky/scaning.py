@@ -264,7 +264,7 @@ def process_sub_path(scan_path):
     map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
 
     for file in destFileList:
-        if file in get_opened_fd() and check_disk_used() < 2:
+        if file in get_opened_fd() and check_disk_used() <= 2:
             try:
                 syslog.syslog("Flush file:%s"%file)
                 destFileList.remove(file)
@@ -275,16 +275,16 @@ def process_sub_path(scan_path):
   
     if Delete and destFileList:
         for file in destFileList:
-            if check_disk_used() < 5 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
+            if check_disk_used() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
                 try:
+                    syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
-                    syslog.syslog('delete file: %s'%file)
                 except Exception,e:
                     syslog.syslog(e)
             elif check_disk_used() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
+                    syslog.syslog('2.0delete file: %s'%file)
                     os.remove(file)
-                    syslog.syslog('delete file: %s'%file)
                 except Exception,e:
                     syslog.syslog(e)
     elif destFileList:
