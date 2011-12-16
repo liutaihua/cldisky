@@ -268,7 +268,10 @@ def process_sub_path(scan_path):
             try:
                 syslog.syslog("Flush file:%s"%file)
                 destFileList.remove(file)
-                open(file,'w').flush()
+                f = open(file,'w')
+                f.flush()
+                time.sleep(1)
+                f.close()
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
                 continue
