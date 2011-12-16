@@ -99,7 +99,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
-        if os.path.basename(file).endswith(".tar.gz") or os.path.basename(file).endswith(".gz") or os.path.basename(file).endswith(".tar") or os.path.basename(file).endswith(".tar.bz2"):
+        if filter(lambda x:file.endswith(x), [".tar.gz",".gz",".tar",".tar.bz2"]):
             try:
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
@@ -209,42 +209,89 @@ def check_disk_used():
     used = total - available
     usage = (float(used)/float(total))*100
     idle = (float(available)/float(total))*100
-   
     return idle
 
+def get_opened_fd():
+    pids=os.listdir('/proc')
+    open_files = {}
+    fd_list = []
+    opened_list = []
+    for pid in sorted(pids):
+        try:
+            int(pid)
+        except ValueError:
+            continue
+        fd_dir=os.path.join('/proc', pid, 'fd')
+        try:
+            fds = os.listdir(fd_dir)
+        except OSError:
+            continue
+        for file in fds:
+            try:
+                link=os.readlink(os.path.join(fd_dir, file))
+            except OSError:
+                continue
+            fd_list.append(link)
+    for file in fd_list:
+        try:
+            if os.path.exists(file):
+                opened_list.append(file)
+        except Exception, e:
+            continue
+    return opened_list
 
 def process_sub_path(scan_path):
     txtfile_list = []
     match_list = []
     tmp_file_list = []
 
+    timeFileDict = {}
+    destFileList = []
+
     for root, dirs, files in os.walk(scan_path):
         for file in files:
             fullFilePath = os.path.join(root, file)
-            if os.path.exists(fullFilePath):
-                fileTime = os.stat(fullFilePath).st_mtime
-                if check_disk_used() < 1 and float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - 3600:
-                    tmp_file_list.append(fullFilePath)
-                elif float(os.path.getsize(fullFilePath))/1024/1024 > size and int(fileTime) < int(time.time()) - int(intervalTime)*86400:
-                    tmp_file_list.append(fullFilePath)
+            if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
+                tmp_file_list.append(fullFilePath)
     if tmp_file_list:
         IsTxtFile(tmp_file_list, txtfile_list)
 
     if txtfile_list:
         ReMatch(txtfile_list, match_list)
+
+    for file in match_list:
+        timeFileDict[file] = os.stat(file).st_mtime
+    map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
+
+    for file in destFileList:
+        if file in get_opened_fd() and check_disk_used() <= 2:
+            try:
+                syslog.syslog("Flush file:%s"%file)
+                destFileList.remove(file)
+                f = open(file,'w')
+                f.flush()
+                time.sleep(1)
+                f.close()
+            except Exception, e:
+                syslog.syslog("Flush file:%s break some error"%file)
+                continue
   
-    if Delete and match_list or check_disk_used() < 1 and match_list:
-        for file in match_list:
-            if check_disk_used() < threshold:
+    if Delete and destFileList:
+        for file in destFileList:
+            if check_disk_used() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
                 try:
+                    syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
-                    syslog.syslog('delete file: %s'%file)
                 except Exception,e:
                     syslog.syslog(e)
-            else:break
-        sys.exit(0)
-    elif match_list:
-        map(lambda x:file_list.append(x), [i for i in match_list])
+            elif check_disk_used() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
+                try:
+                    syslog.syslog('2.0delete file: %s'%file)
+                    os.remove(file)
+                except Exception,e:
+                    syslog.syslog(e)
+    elif destFileList:
+        map(lambda x:file_list.append(x), [i for i in destFileList])
    
        
 def tar_process(file_list):
@@ -261,8 +308,6 @@ def tar_process(file_list):
         if True:
             os.remove(dest_path)
 
-    
-
 
 def main(path='/'):
     map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
@@ -277,10 +322,13 @@ def main(path='/'):
     wm.start()
     wm.wait_for_complete()
    
-    tar_process(file_list) 
-
-    if SM:sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
-
+    if not Delete:
+        tar_process(file_list) 
+    if SM:
+        try:
+            sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
+        except Exception, e:
+            syslog.syslog("sendEmail error: %s"%e)
 
 
 def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
@@ -318,8 +366,9 @@ def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port =
         time.sleep(3)
         sftp.close()
         ssh.close()
-    except paramiko.SSHException:
-     ssh.close()
+    except Exception, e:
+        syslog.syslog(e)
+        ssh.close()
 
 
 def getLocalIp():
@@ -359,7 +408,3 @@ class MyDaemon(Daemon):
             else:
                 syslog.syslog("0:Disk Idle:%s, continue to sleep."%int(dl))
             time.sleep(300)
-        
-     
-                
-

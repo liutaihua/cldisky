@@ -38,7 +38,7 @@ except Exception,e :
     exclude_path = []
 
 try:
-    dest_reList = ['(.*\\.log)\\.\\d{4}-\\d{1,2}-\\d{1,2}(\\.\\d{1,2})?', '.*\\d{4}-\\d{2}-\\d{1,2}\\.tar\\.gz', '.*\\d{4}-\\d{2}-\\d{2}(-\\d{1,2})?\\.log']
+    dest_reList = ['.*log.*']
     reList = [i.strip() for i in cf.get('filter','reList').split('||')]
 except Exception, e:
     reList = []
