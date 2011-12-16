@@ -95,7 +95,7 @@ class WorkerManager:
         return self.resultQueue.get( *args, **kwds )
 
 
-def IsTxtFile(file_list, txtfile_list, blocksize = 512):
+def IsTxtFile(file_list, blocksize = 512):
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     for file in file_list:
@@ -103,7 +103,7 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             try:
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
-                txtfile_list.append(file)
+                #txtfile_list.append(file)
                 syslog.syslog(e)
                 continue
             tarFileList = tar.getnames()
@@ -134,13 +134,13 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
                     continue
                 tar_text_file_num += 1
             if float(tar_text_file_num)/float(allTarFile_num) > 0.8:
-                txtfile_list.append(file)
+                yield file
         else:
             s = open(file).read(blocksize)
             if "\0" in s:
                 continue
             if not s:  # Empty files are considered text
-                txtfile_list.append(file)
+                yield file
                 continue
 
             # Get the non-text characters (maps a character to itself then
@@ -151,19 +151,16 @@ def IsTxtFile(file_list, txtfile_list, blocksize = 512):
             # this is considered a binary file
             if len(t)/len(s) > 0.30:
                 continue
-            txtfile_list.append(file)
-    return txtfile_list
+            yield file
 
         
-def ReMatch(file_list, match_list):
+def ReMatch(file_list):
     for file in file_list:
         for COMPILE in dest_reList:
             p = re.compile(COMPILE)
             result = p.match(file)
             if result:
-                match_list.append(result.group())
-    match_list = filter(None,match_list)
-    return match_list
+                yield result.group()
 
 
 '''打包压缩'''
@@ -215,7 +212,6 @@ def get_opened_fd():
     pids=os.listdir('/proc')
     open_files = {}
     fd_list = []
-    opened_list = []
     for pid in sorted(pids):
         try:
             int(pid)
@@ -235,36 +231,33 @@ def get_opened_fd():
     for file in fd_list:
         try:
             if os.path.exists(file):
-                opened_list.append(file)
+                yield file
         except Exception, e:
             continue
-    return opened_list
 
 def process_sub_path(scan_path):
-    txtfile_list = []
-    match_list = []
-    tmp_file_list = []
-
-    timeFileDict = {}
+    file_list = []
     destFileList = []
+    timeFileDict = {}
 
     for root, dirs, files in os.walk(scan_path):
         for file in files:
             fullFilePath = os.path.join(root, file)
             if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
-                tmp_file_list.append(fullFilePath)
-    if tmp_file_list:
-        IsTxtFile(tmp_file_list, txtfile_list)
+                file_list.append(fullFilePath)
+    if file_list:
+        file_list = [ i for i in IsTxtFile(file_list)]
 
-    if txtfile_list:
-        ReMatch(txtfile_list, match_list)
+    if file_list:
+        '''filter去空list元素'''
+        file_list = filter(None, [ i for i in ReMatch(file_list)])
 
-    for file in match_list:
+    for file in file_list:
         timeFileDict[file] = os.stat(file).st_mtime
     map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
 
     for file in destFileList:
-        if file in get_opened_fd() and check_disk_used() <= 2:
+        if file in [ i for i in get_opened_fd()] and check_disk_used() <= 2:
             try:
                 syslog.syslog("Flush file:%s"%file)
                 destFileList.remove(file)
@@ -291,7 +284,7 @@ def process_sub_path(scan_path):
                 except Exception,e:
                     syslog.syslog(e)
     elif destFileList:
-        map(lambda x:file_list.append(x), [i for i in destFileList])
+        map(lambda x:forTar_list.append(x), [i for i in destFileList])
    
        
 def tar_process(file_list):
@@ -314,8 +307,8 @@ def main(path='/'):
     _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
     dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
 
-    global file_list 
-    file_list = []
+    global forTar_list 
+    forTar_list = []
     wm = WorkerManager(17)
     for scan_path in dir_list:
         wm.add_job(process_sub_path, scan_path)
@@ -323,7 +316,7 @@ def main(path='/'):
     wm.wait_for_complete()
    
     if not Delete:
-        tar_process(file_list) 
+        tar_process(forTar_list) 
     if SM:
         try:
             sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
