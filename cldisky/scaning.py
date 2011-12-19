@@ -179,7 +179,7 @@ def Tar(file_list, tar_name, compression='gz'):
     dest_path = '%s/'%tar_path + dest_name
     out = tarfile.TarFile.open(dest_path, 'w'+dest_cmp)
     for tar in file_list:
-        if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(file)):
+        if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
             continue
         elif check_disk_used() < threshold :
             callBack()
@@ -256,6 +256,7 @@ def process_sub_path(scan_path):
         timeFileDict[file] = os.stat(file).st_mtime
     map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
 
+    _destFileList = []
     for file in destFileList:
         if file in [ i for i in get_opened_fd()] and check_disk_used() <= 2:
             try:
@@ -268,7 +269,10 @@ def process_sub_path(scan_path):
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
                 continue
+        elif file in get_opened_fd():
+            _destFileList.append(file)
   
+    map(lambda x:destFileList.remove(x), _destFileList)
     if Delete and destFileList:
         for file in destFileList:
             if check_disk_used() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
