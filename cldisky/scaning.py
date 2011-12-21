@@ -388,6 +388,7 @@ def callBack():
 class MyDaemon(Daemon):
     def run(self):
         syslog.openlog('ScanDisk',syslog.LOG_PID)
+        syslog.syslog("Disk Idle:%s, to sleep."%int(dl))
         while True:
             dl = check_disk_used()
             if dl < avail :
@@ -403,5 +404,5 @@ class MyDaemon(Daemon):
                     syslog.syslog('2:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
                     main(ScanPath)
             else:
-                syslog.syslog("0:Disk Idle:%s, continue to sleep."%int(dl))
+                pass
             time.sleep(300)
