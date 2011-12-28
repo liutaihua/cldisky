@@ -31,7 +31,7 @@ threshold = 8 + avail
 callBackList = []
 #tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
-dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/root', '/selinux', '/srv', '/sys', '/usr', '/run', '/cdrom', '/media', '/lost+found']
+dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/selinux', '/srv', '/sys', '/run', '/cdrom', '/media', '/lost+found']
 
 
 
@@ -181,7 +181,7 @@ def Tar(file_list, tar_name, compression='gz'):
     for tar in file_list:
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
             continue
-        elif check_disk_used() < threshold :
+        elif get_disk_idl() < threshold :
             callBack()
             syslog.syslog("tar file and to delete: %s"%tar)
             out.add(tar)
@@ -199,7 +199,7 @@ def Tar(file_list, tar_name, compression='gz'):
 
 
 '''磁盘check'''
-def check_disk_used():
+def get_disk_idl():
     vfs = os.statvfs("/")
     available = vfs[statvfs.F_BAVAIL]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
     total = vfs[statvfs.F_BLOCKS]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
@@ -258,7 +258,7 @@ def process_sub_path(scan_path):
 
     _destFileList = []
     for file in destFileList:
-        if file in [ i for i in get_opened_fd()] and check_disk_used() <= 2:
+        if file in [ i for i in get_opened_fd()] and get_disk_idl() <= 2:
             try:
                 syslog.syslog("Flush file:%s"%file)
                 destFileList.remove(file)
@@ -275,13 +275,13 @@ def process_sub_path(scan_path):
     map(lambda x:destFileList.remove(x), _destFileList)
     if Delete and destFileList:
         for file in destFileList:
-            if check_disk_used() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
                     syslog.syslog(e)
-            elif check_disk_used() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
+            elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
                     os.remove(file)
@@ -390,7 +390,7 @@ class MyDaemon(Daemon):
         syslog.openlog('ScanDisk',syslog.LOG_PID)
         syslog.syslog("Disk Idle:%s, to sleep."%int(dl))
         while True:
-            dl = check_disk_used()
+            dl = get_disk_idl()
             if dl < avail :
                 if callBackList:
                     if int(time.time()) - int(callBackList[len(callBackList)-1]) > wait_time*60:

@@ -10,10 +10,16 @@ else:
     os.system('cldisky_confecho')
     cf.read("/etc/cldisky.conf")
 
-
-avail = cf.getint('general','avail')
 intervalTime = cf.getint('general','intervalTime')
-wait_time = cf.getint('general','wait_time')
+
+try:
+    avail = cf.getint('general','avail')
+except Exception, e:
+    avail = 10
+try:
+    wait_time = cf.getint('general','wait_time')
+except Exception, e:
+    wait_time = 60
 try:
     size = cf.getint('general','size')
 except Exception, e:
