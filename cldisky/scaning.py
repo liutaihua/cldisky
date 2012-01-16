@@ -260,7 +260,7 @@ def process_sub_path(scan_path):
     map(lambda x:destFileList.remove(x), openedFileList)
     if Delete and destFileList:
         for file in destFileList:
-            if get_disk_idl() <= 7 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() <= 8 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
