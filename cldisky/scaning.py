@@ -287,20 +287,28 @@ def process_sub_path(scan_path):
         map(lambda x:forTar_list.append(x), [i for i in destFileList])
    
        
-def tar_process(file_list):
-    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
-    
-    dest_path = Tar(file_list, tar_name)
-    if SP:
-        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
-        LocalPath = dest_path
-        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  tar_name + '.tar.gz'
-        
-        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
-        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
-        if True:
-            os.remove(dest_path)
+#def tar_process(file_list):
+#    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
+#    
+#    dest_path = Tar(file_list, tar_name)
+#    if SP:
+#        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
+#        LocalPath = dest_path
+#        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  tar_name + '.tar.gz'
+#        
+#        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
+#        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
+#        if True:
+#            os.remove(dest_path)
+#
 
+class TarFiler(Thread):
+    def __init__(self, file_list, tar_name):
+        Thread.__init__(self)
+        self.file_list = file_list
+        self.tar_name = tar_name
+    def run(self):
+        Tar(self.file_list, self.tar_name)
 
 def main(path='/'):
     map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
@@ -315,8 +323,26 @@ def main(path='/'):
     wm.start()
     wm.wait_for_complete()
    
-    if not Delete:
-        tar_process(forTar_list) 
+#    if not Delete:
+#        tar_process(forTar_list) 
+    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
+    
+    #dest_path = Tar(file_list, tar_name)
+    TH = TarFiler(file_list, tar_name)
+    TH.start()
+    if TH.isAlive():
+        return False
+    else:return True
+
+    if SP:
+        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
+        LocalPath = dest_path
+        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  tar_name + '.tar.gz'
+        
+        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
+        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
+        if True:
+            os.remove(dest_path)
     if SM:
         try:
             sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
@@ -388,17 +414,10 @@ class MyDaemon(Daemon):
         while True:
             dl = get_disk_idl()
             if dl < avail :
-                if callBackList:
-                    if int(time.time()) - int(callBackList[len(callBackList)-1]) > wait_time*60:
-                        syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
-                        main(ScanPath)
-                    else:
-                        syslog.syslog('1.1:Wait for last scanning to complete.')
-                        if len(callBackList) > 100:
-                            syslog.syslog("callBackList too larger than 100,so flush it.")
-                else:
-                    syslog.syslog('2:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
-                    main(ScanPath)
+                syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                exec_result = main(ScanPath)
+                if not exec_result:
+                    syslog.syslog('1.1:Wait for last scanning to complete.')
             else:
                 pass
             time.sleep(300)
