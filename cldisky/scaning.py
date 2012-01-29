@@ -28,7 +28,6 @@ from readconf import *
 
 
 threshold = 8 + avail
-callBackList = []
 #tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/selinux', '/srv', '/sys', '/run', '/cdrom', '/media', '/lost+found']
@@ -165,6 +164,7 @@ def ReMatch(file_list):
 
 '''打包压缩'''
 def Tar(file_list, tar_name, compression='gz'):
+    global dest_path
     if compression:
         dest_ext = '.' + compression
     else :
@@ -182,10 +182,8 @@ def Tar(file_list, tar_name, compression='gz'):
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
             continue
         elif get_disk_idl() < threshold :
-            callBack()
             syslog.syslog("tar file and to delete: %s"%tar)
             out.add(tar)
-            callBack()
             try:
                 os.remove(tar)
             except OSError:
@@ -286,21 +284,6 @@ def process_sub_path(scan_path):
     if not Delete and destFileList:
         map(lambda x:forTar_list.append(x), [i for i in destFileList])
    
-       
-#def tar_process(file_list):
-#    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
-#    
-#    dest_path = Tar(file_list, tar_name)
-#    if SP:
-#        cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
-#        LocalPath = dest_path
-#        RemotePath = '/opt/logbackup/%s'%getLocalIp() + '/' +  tar_name + '.tar.gz'
-#        
-#        sshCommand(SftpHost, cmd, SftpHostUser, SftpHostPwd, SftpPort)
-#        sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
-#        if True:
-#            os.remove(dest_path)
-#
 
 class TarFiler(Thread):
     def __init__(self, file_list, tar_name):
@@ -310,7 +293,8 @@ class TarFiler(Thread):
     def run(self):
         Tar(self.file_list, self.tar_name)
 
-def main(path='/'):
+
+def getfilelist(path='/'):
     map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
     _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
     dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
@@ -323,17 +307,8 @@ def main(path='/'):
     wm.start()
     wm.wait_for_complete()
    
-#    if not Delete:
-#        tar_process(forTar_list) 
-    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime()) 
-    
-    #dest_path = Tar(file_list, tar_name)
-    TH = TarFiler(file_list, tar_name)
-    TH.start()
-    if TH.isAlive():
-        return False
-    else:return True
 
+def send2sftp():
     if SP:
         cmd = 'mkdir -p /opt/logbackup/%s && chown -R logbackup.logbackup /opt/logbackup/%s'%(getLocalIp(),getLocalIp())
         LocalPath = dest_path
@@ -343,6 +318,8 @@ def main(path='/'):
         sftpFile(SftpHost, LocalPath, RemotePath, SftpHostUser, SftpHostPwd, SftpPort)
         if True:
             os.remove(dest_path)
+
+def send2mail():
     if SM:
         try:
             sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
@@ -393,14 +370,10 @@ def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port =
 def getLocalIp():
     from socket import socket, SOCK_DGRAM, AF_INET
     s = socket(AF_INET, SOCK_DGRAM)
-    s.connect(('baidu.com',0))
+    s.connect(('8.8.8.8',0))
     LocalIp = s.getsockname()[0]
     s.close()
     return LocalIp
-
-
-def callBack():
-    callBackList.append(time.time())
 
 
 '''daemon 类'''
@@ -410,14 +383,18 @@ def callBack():
 class MyDaemon(Daemon):
     def run(self):
         syslog.openlog('ScanDisk',syslog.LOG_PID)
-        syslog.syslog("Disk Idle:%s, to sleep."%get_disk_idl())
         while True:
             dl = get_disk_idl()
             if dl < avail :
                 syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
-                exec_result = main(ScanPath)
-                if not exec_result:
-                    syslog.syslog('1.1:Wait for last scanning to complete.')
+                getfilelist(ScanPath)
+                if not Delete:
+                    tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
+                    TH = TarFiler(forTar_list, tar_name)
+                    TH.start()
+                    while TH.isAlive():
+                        time.sleep(3)
+                    syslog.syslog("tar process have to complete!@_@")
             else:
-                pass
+                syslog.syslog("Disk Idle:%s, to sleep."%get_disk_idl())
             time.sleep(300)
