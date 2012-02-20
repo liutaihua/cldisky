@@ -17,10 +17,6 @@ try:
 except Exception, e:
     avail = 10
 try:
-    wait_time = cf.getint('general','wait_time')
-except Exception, e:
-    wait_time = 60
-try:
     size = cf.getint('general','size')
 except Exception, e:
     size = 10
