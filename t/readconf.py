@@ -33,12 +33,6 @@ except Exception, e:
 
 Delete = int(cf.get('general','Delete'))
 
-#ext = cf.get('filter','ext').split()
-try:
-    exclude_path = cf.get('filter','exclude_path').split()
-except Exception,e :
-    exclude_path = []
-
 try:
     dest_reList = ['.*log.*']
     reList = [i.strip() for i in cf.get('filter','reList').split('||')]

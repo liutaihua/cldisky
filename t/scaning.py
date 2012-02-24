@@ -30,7 +30,6 @@ from readconf import *
 threshold = 8 + avail
 #tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
-dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/selinux', '/srv', '/sys', '/run', '/cdrom', '/media', '/lost+found']
 
 
 
@@ -236,7 +235,7 @@ def get_opened_fd():
 def getfilelist(path4scan):
     file_list = []
     destFile_list = []
-    fileTime_list= {}
+    fileTime_dict= {}
 
     for root, dirs, files in os.walk(path4scan):
         for file in files:
@@ -245,14 +244,17 @@ def getfilelist(path4scan):
                 file_list.append(fullFilePath)
     if file_list:
         file_list = [ i for i in IsTxtFile(file_list)]
+    else:
+        print path4scan,"is empty."
 
     if file_list:
         '''filter去空list元素'''
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
+    '''sort by time for filelist'''
     for file in file_list:
-        fileTime_list[file] = os.stat(file).st_mtime
-    map(lambda x:destFile_list.append(x[0]), sorted(fileTime_list.items(),key=lambda d:d[1]))
+        fileTime_dict[file] = os.stat(file).st_mtime
+    map(lambda x:destFile_list.append(x[0]), sorted(fileTime_dict.items(),key=lambda d:d[1]))
 
     return destFile_list
 
@@ -267,7 +269,7 @@ def processer(path4scan):
 
     if Delete and destFile_list:
         for file in destFile_list:
-            if get_disk_idl() <= 8 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() <= 8 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
@@ -304,14 +306,27 @@ class Compresser(Thread):
 
 
 def main(path='/'):
-    map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
-    _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
-    dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
+    #map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
+    #_dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
+    #dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
+    dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
+    '''exclude the system dir'''
+    re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|boot")
+    dir_list = filter(lambda x:not re_word4exclude.findall(x),dir_list)
+
+    path4scan_list = []
+    for subdir in dir_list:
+        for i in os.listdir(subdir):
+            subpath = os.path.join(subdir,i)
+            if os.path.isdir(subpath):
+                path4scan_list.append(subpath)
+
+    print path4scan_list
     global file4compress_list 
     file4compress_list = []
     wm = WorkerManager(17)
-    for path4scan in dir_list:
+    for path4scan in path4scan_list:
         wm.add_job(processer, path4scan)
     wm.start()
     wm.wait_for_complete()
