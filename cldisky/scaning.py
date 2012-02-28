@@ -294,7 +294,7 @@ class TarFiler(Thread):
         Tar(self.file_list, self.tar_name)
 
 
-def getfilelist(path='/'):
+def main(path='/'):
     map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
     _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
     dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
@@ -387,7 +387,7 @@ class MyDaemon(Daemon):
             dl = get_disk_idl()
             if dl < avail :
                 syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
-                getfilelist(ScanPath)
+                main(ScanPath)
                 if not Delete:
                     tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
                     TH = TarFiler(forTar_list, tar_name)
