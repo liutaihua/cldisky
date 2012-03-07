@@ -30,6 +30,7 @@ from readconf import *
 threshold = 8 + avail
 #tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
+re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
 
 
 
@@ -161,7 +162,7 @@ def ReMatch(file_list):
                 yield result.group()
 
 
-'''æ‰“åŒ…åŽ‹ç¼©'''
+'''´ò°üÑ¹Ëõ'''
 def Compress(file_list, tar_name, compression='gz'):
     global dest_path
     if compression:
@@ -195,7 +196,7 @@ def Compress(file_list, tar_name, compression='gz'):
     return dest_path
 
 
-'''ç£ç›˜check'''
+'''´ÅÅÌcheck'''
 def get_disk_idl():
     vfs = os.statvfs("/")
     available = vfs[statvfs.F_BAVAIL]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
@@ -238,6 +239,7 @@ def getfilelist(path4scan):
     fileTime_dict= {}
 
     for root, dirs, files in os.walk(path4scan):
+        if re_word4exclude.findall(root):continue
         for file in files:
             fullFilePath = os.path.join(root, file)
             if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
@@ -245,10 +247,11 @@ def getfilelist(path4scan):
     if file_list:
         file_list = [ i for i in IsTxtFile(file_list)]
     else:
-        print path4scan,"is empty."
+        #print path4scan,"is empty."
+        pass
 
     if file_list:
-        '''filteråŽ»ç©ºlistå…ƒç´ '''
+        '''filterÈ¥¿ÕlistÔªËØ'''
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
     '''sort by time for filelist'''
@@ -278,7 +281,8 @@ def processer(path4scan):
             elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
-                    os.remove(file)
+                    #os.remove(file)
+                    print "rm file.ha not ture",file
                 except Exception,e:
                     syslog.syslog(e)
     if Delete and openedFile_list and get_disk_idl() <= 2:
@@ -306,26 +310,26 @@ class Compresser(Thread):
 
 
 def main(path='/'):
-    #map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
-    #_dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
-    #dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
-    '''exclude the system dir'''
-    re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|boot")
-    dir_list = filter(lambda x:not re_word4exclude.findall(x),dir_list)
-
+    _path4scan_list = []
     path4scan_list = []
     for subdir in dir_list:
         for i in os.listdir(subdir):
             subpath = os.path.join(subdir,i)
             if os.path.isdir(subpath):
-                path4scan_list.append(subpath)
+                _path4scan_list.append(subpath)
 
-    print path4scan_list
-    global file4compress_list 
-    file4compress_list = []
-    wm = WorkerManager(17)
+    '''ÉîÈëµ½µÚ3²ãÄ¿Â¼£¬ÒÔ±¸ºóÃæµÄ¹Øé”????ÅÅ³ý'''
+    path4scan_subdir_lit = map(lambda x:os.listdir(x), _path4scan_list)
+
+    '''exclude the system dir'''
+    for index, root in enumerate(_path4scan_list):
+        for dir in path4scan_subdir_lit[index]:
+            path4scan_list.append(os.path.join(root,dir))
+    path4scan_list = filter(lambda x:not re_word4exclude.findall(x), path4scan_list)
+    
+    wm = WorkerManager(10)
     for path4scan in path4scan_list:
         wm.add_job(processer, path4scan)
     wm.start()
@@ -365,7 +369,7 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
 
 
 '''
-å»ºç«‹sftpï¼ŒæŽ¥å—å‚æ•°ä¼ æ–‡ä»¶
+½¨Á¢sftp£¬½ÓÊÜå??Êý´«ÎÄ¼þ
 '''
 def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
     import paramiko
@@ -400,7 +404,7 @@ def getLocalIp():
     return LocalIp
 
 
-'''daemon ç±»'''
+'''daemon Àà'''
 
 #class MyDaemon(Daemon):
 def run():
@@ -409,6 +413,7 @@ def run():
         dl = get_disk_idl()
         if dl < avail :
             syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+            print 111111,"start scan"
             main(ScanPath)
             if not Delete:
                 tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
@@ -419,6 +424,6 @@ def run():
                 syslog.syslog("tar process have to complete!@_@")
         else:
             syslog.syslog("Disk Idle:%s, to sleep."%get_disk_idl())
-        time.sleep(300)
+        time.sleep(120)
 if __name__ == "__main__":
     run()
