@@ -162,7 +162,7 @@ def ReMatch(file_list):
                 yield result.group()
 
 
-'''´ò°üÑ¹Ëõ'''
+'''compress action'''
 def Compress(file_list, tar_name, compression='gz'):
     global dest_path
     if compression:
@@ -196,7 +196,7 @@ def Compress(file_list, tar_name, compression='gz'):
     return dest_path
 
 
-'''´ÅÅÌcheck'''
+'''the disk HD idl check'''
 def get_disk_idl():
     vfs = os.statvfs("/")
     available = vfs[statvfs.F_BAVAIL]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
@@ -251,7 +251,7 @@ def getfilelist(path4scan):
         pass
 
     if file_list:
-        '''filterÈ¥¿ÕlistÔªËØ'''
+        '''filter the NULL element of list'''
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
     '''sort by time for filelist'''
@@ -320,7 +320,6 @@ def main(path='/'):
             if os.path.isdir(subpath):
                 _path4scan_list.append(subpath)
 
-    '''ÉîÈëµ½µÚ3²ãÄ¿Â¼£¬ÒÔ±¸ºóÃæµÄ¹Øé”????ÅÅ³ı'''
     path4scan_subdir_lit = map(lambda x:os.listdir(x), _path4scan_list)
 
     '''exclude the system dir'''
@@ -369,7 +368,7 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
 
 
 '''
-½¨Á¢sftp£¬½ÓÊÜå??Êı´«ÎÄ¼ş
+sftp file action
 '''
 def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
     import paramiko
@@ -404,7 +403,7 @@ def getLocalIp():
     return LocalIp
 
 
-'''daemon Àà'''
+'''daemon class'''
 
 #class MyDaemon(Daemon):
 def run():
