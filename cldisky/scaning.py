@@ -30,7 +30,7 @@ from readconf import *
 threshold = 8 + avail
 #tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
-dest_exclude_path = ['/etc', '/var', '/bin', '/sbin', '/boot', '/dev', '/lib', '/lib64', '/misc', '/proc', '/selinux', '/srv', '/sys', '/run', '/cdrom', '/media', '/lost+found']
+re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
 
 
 
@@ -162,8 +162,7 @@ def ReMatch(file_list):
                 yield result.group()
 
 
-'''打包压缩'''
-def Tar(file_list, tar_name, compression='gz'):
+def Compress(file_list, tar_name, compression='gz'):
     global dest_path
     if compression:
         dest_ext = '.' + compression
@@ -196,7 +195,6 @@ def Tar(file_list, tar_name, compression='gz'):
     return dest_path
 
 
-'''磁盘check'''
 def get_disk_idl():
     vfs = os.statvfs("/")
     available = vfs[statvfs.F_BAVAIL]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
@@ -233,32 +231,45 @@ def get_opened_fd():
         except Exception, e:
             continue
 
-def process_sub_path(scan_path):
+def getfilelist(path4scan):
     file_list = []
-    destFileList = []
-    timeFileDict = {}
+    destFile_list = []
+    fileTime_dict= {}
 
-    for root, dirs, files in os.walk(scan_path):
+    for root, dirs, files in os.walk(path4scan):
+        if re_word4exclude.findall(root):continue
         for file in files:
             fullFilePath = os.path.join(root, file)
             if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
                 file_list.append(fullFilePath)
     if file_list:
         file_list = [ i for i in IsTxtFile(file_list)]
+    else:
+        #print path4scan,"is empty."
+        pass
 
     if file_list:
-        '''filter去空list元素'''
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
+    '''sort by time for filelist'''
     for file in file_list:
-        timeFileDict[file] = os.stat(file).st_mtime
-    map(lambda x:destFileList.append(x[0]), sorted(timeFileDict.items(),key=lambda d:d[1]))
+        fileTime_dict[file] = os.stat(file).st_mtime
+    map(lambda x:destFile_list.append(x[0]), sorted(fileTime_dict.items(),key=lambda d:d[1]))
 
-    openedFileList = filter(lambda x:x in [ i for i in get_opened_fd()], destFileList)
-    map(lambda x:destFileList.remove(x), openedFileList)
-    if Delete and destFileList:
-        for file in destFileList:
-            if get_disk_idl() <= 8 and int(time.time()) - 3600 > int(os.stat(file).st_mtime):
+    return destFile_list
+
+
+
+def processer(path4scan):
+    destFile_list = getfilelist(path4scan)
+
+    '''remove file from destFile_list,if the file had opened with in some program'''
+    openedFile_list = filter(lambda x:x in [ i for i in get_opened_fd()], destFile_list)
+    map(lambda x:destFile_list.remove(x), openedFile_list)
+
+    if Delete and destFile_list:
+        for file in destFile_list:
+            if get_disk_idl() <= 8 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
@@ -268,10 +279,11 @@ def process_sub_path(scan_path):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
                     os.remove(file)
+                    print "rm file.ha not ture",file
                 except Exception,e:
                     syslog.syslog(e)
-    if Delete and openedFileList and get_disk_idl() <= 2:
-        for file in openedFileList:
+    if Delete and openedFile_list and get_disk_idl() <= 2:
+        for file in openedFile_list:
             try:
                 syslog.syslog("Flush file: %s"%file)
                 f = open(file,'w')
@@ -281,29 +293,41 @@ def process_sub_path(scan_path):
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
                 continue
-    if not Delete and destFileList:
-        map(lambda x:forTar_list.append(x), [i for i in destFileList])
+    if not Delete and destFile_list:
+        map(lambda x:file4compress_list.append(x), [i for i in destFile_list])
    
 
-class TarFiler(Thread):
+class Compresser(Thread):
     def __init__(self, file_list, tar_name):
         Thread.__init__(self)
         self.file_list = file_list
         self.tar_name = tar_name
     def run(self):
-        Tar(self.file_list, self.tar_name)
+        Compress(self.file_list, self.tar_name)
 
 
 def main(path='/'):
-    map(lambda x:dest_exclude_path.append(x), [i for i in exclude_path])
-    _dir_list = filter(lambda x:os.path.isdir(x),[os.path.join('/',i) for i in os.listdir(path)])
-    dir_list = filter(lambda x:x not in dest_exclude_path, [i for i in _dir_list])
+    dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
-    global forTar_list 
-    forTar_list = []
-    wm = WorkerManager(17)
-    for scan_path in dir_list:
-        wm.add_job(process_sub_path, scan_path)
+    _path4scan_list = []
+    path4scan_list = []
+    for subdir in dir_list:
+        for i in os.listdir(subdir):
+            subpath = os.path.join(subdir,i)
+            if os.path.isdir(subpath):
+                _path4scan_list.append(subpath)
+
+    path4scan_subdir_lit = map(lambda x:os.listdir(x), _path4scan_list)
+
+    '''exclude the system dir'''
+    for index, root in enumerate(_path4scan_list):
+        for dir in path4scan_subdir_lit[index]:
+            path4scan_list.append(os.path.join(root,dir))
+    path4scan_list = filter(lambda x:not re_word4exclude.findall(x), path4scan_list)
+    
+    wm = WorkerManager(10)
+    for path4scan in path4scan_list:
+        wm.add_job(processer, path4scan)
     wm.start()
     wm.wait_for_complete()
    
@@ -340,9 +364,6 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
     return stdout
 
 
-'''
-建立sftp，接受参数传文件
-'''
 def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
     import paramiko
     ssh = paramiko.SSHClient()
