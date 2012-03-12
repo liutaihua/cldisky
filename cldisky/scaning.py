@@ -269,7 +269,7 @@ def processer(path4scan):
 
     if Delete and destFile_list:
         for file in destFile_list:
-            if get_disk_idl() <= 8 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
@@ -282,7 +282,7 @@ def processer(path4scan):
                     print "rm file.ha not ture",file
                 except Exception,e:
                     syslog.syslog(e)
-    if Delete and openedFile_list and get_disk_idl() <= 2:
+    if Delete and openedFile_list and get_disk_idl() <= 3:
         for file in openedFile_list:
             try:
                 syslog.syslog("Flush file: %s"%file)
