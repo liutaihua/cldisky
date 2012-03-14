@@ -417,5 +417,5 @@ class MyDaemon(Daemon):
                         time.sleep(3)
                     syslog.syslog("tar process have to complete!@_@")
             else:
-                syslog.syslog("Disk Idle:%s, to sleep."%get_disk_idl())
-            time.sleep(300)
+                syslog.syslog("Disk Idle:%s, to sleep."%int(get_disk_idl()))
+            time.sleep(600)
