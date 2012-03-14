@@ -10,12 +10,15 @@ else:
     os.system('cldisky_confecho')
     cf.read("/etc/cldisky.conf")
 
-intervalTime = cf.getint('general','intervalTime')
+try:
+    intervalTime = cf.getint('general','intervalTime')
+except Exception, e:
+    intervalTime = 15
 
 try:
     avail = cf.getint('general','avail')
 except Exception, e:
-    avail = 10
+    avail = 15
 try:
     size = cf.getint('general','size')
 except Exception, e:
@@ -26,9 +29,9 @@ except Exception,e:
     ScanPath = '/'
 
 try:
-    tar_path = cf.get('general', 'tar_path')
+    path4save_tar = cf.get('general', 'tar_path')
 except Exception, e:
-    tar_path = '/tmp'
+    path4save_tar = '/tmp'
 
 
 Delete = int(cf.get('general','Delete'))

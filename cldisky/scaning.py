@@ -28,7 +28,6 @@ from readconf import *
 
 
 threshold = 8 + avail
-#tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
 
@@ -175,7 +174,7 @@ def Compress(file_list, tar_name, compression='gz'):
         dest_cmp = ''
     arcname = tar_name
     dest_name = '%s.tar%s' % (arcname,dest_ext)
-    dest_path = '%s/'%tar_path + dest_name
+    dest_path = '%s/'%path4save_tar + dest_name
     out = tarfile.TarFile.open(dest_path, 'w'+dest_cmp)
     for tar in file_list:
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
@@ -279,7 +278,6 @@ def processer(path4scan):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
                     os.remove(file)
-                    print "rm file.ha not ture",file
                 except Exception,e:
                     syslog.syslog(e)
     if Delete and openedFile_list and get_disk_idl() <= 3:
