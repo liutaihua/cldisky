@@ -28,7 +28,6 @@ from readconf import *
 
 
 threshold = 8 + avail
-#tar_path = '/tmp/'
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
 
@@ -162,7 +161,6 @@ def ReMatch(file_list):
                 yield result.group()
 
 
-'''compress action'''
 def Compress(file_list, tar_name, compression='gz'):
     global dest_path
     if compression:
@@ -176,7 +174,7 @@ def Compress(file_list, tar_name, compression='gz'):
         dest_cmp = ''
     arcname = tar_name
     dest_name = '%s.tar%s' % (arcname,dest_ext)
-    dest_path = '%s/'%tar_path + dest_name
+    dest_path = '%s/'%path4save_tar + dest_name
     out = tarfile.TarFile.open(dest_path, 'w'+dest_cmp)
     for tar in file_list:
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
@@ -196,7 +194,6 @@ def Compress(file_list, tar_name, compression='gz'):
     return dest_path
 
 
-'''the disk HD idl check'''
 def get_disk_idl():
     vfs = os.statvfs("/")
     available = vfs[statvfs.F_BAVAIL]*vfs[statvfs.F_BSIZE]/(1024*1024*1024)
@@ -251,7 +248,6 @@ def getfilelist(path4scan):
         pass
 
     if file_list:
-        '''filter the NULL element of list'''
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
     '''sort by time for filelist'''
@@ -272,7 +268,7 @@ def processer(path4scan):
 
     if Delete and destFile_list:
         for file in destFile_list:
-            if get_disk_idl() <= 8 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('1.0delete file: %s'%file)
                     os.remove(file)
@@ -281,11 +277,10 @@ def processer(path4scan):
             elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
-                    #os.remove(file)
-                    print "rm file.ha not ture",file
+                    os.remove(file)
                 except Exception,e:
                     syslog.syslog(e)
-    if Delete and openedFile_list and get_disk_idl() <= 2:
+    if Delete and openedFile_list and get_disk_idl() <= 3:
         for file in openedFile_list:
             try:
                 syslog.syslog("Flush file: %s"%file)
@@ -367,9 +362,6 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
     return stdout
 
 
-'''
-sftp file action
-'''
 def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
     import paramiko
     ssh = paramiko.SSHClient()
@@ -403,16 +395,17 @@ def getLocalIp():
     return LocalIp
 
 
-'''daemon class'''
+'''daemon 类'''
 
+if __name__ == "__main__":
+#   main()
 #class MyDaemon(Daemon):
-def run():
+#    def run(self):
     syslog.openlog('ScanDisk',syslog.LOG_PID)
     while True:
         dl = get_disk_idl()
         if dl < avail :
             syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
-            print 111111,"start scan"
             main(ScanPath)
             if not Delete:
                 tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
@@ -422,7 +415,5 @@ def run():
                     time.sleep(3)
                 syslog.syslog("tar process have to complete!@_@")
         else:
-            syslog.syslog("Disk Idle:%s, to sleep."%get_disk_idl())
-        time.sleep(120)
-if __name__ == "__main__":
-    run()
+            syslog.syslog("Disk Idle:%s, to sleep."%int(get_disk_idl()))
+        time.sleep(600)
