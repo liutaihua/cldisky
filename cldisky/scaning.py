@@ -406,10 +406,11 @@ class MyDaemon(Daemon):
             dl = get_disk_idl()
             if dl < avail :
                 syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                file4compress_list = []
                 main(ScanPath)
                 if not Delete:
                     tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
-                    TH = TarFiler(forTar_list, tar_name)
+                    TH = Compresser(file4compress_list, tar_name)
                     TH.start()
                     while TH.isAlive():
                         time.sleep(3)
