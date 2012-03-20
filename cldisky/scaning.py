@@ -314,7 +314,7 @@ class Compresser(Thread):
 
 def main(path='/'):
     global ignore_scan_num
-    if ignore_scan and ignore_scan_num <= 6:
+    if ignore_scan and ignore_scan_num <= 3:
         ignore_scan_num += 1
         syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
         return
@@ -417,6 +417,7 @@ def getLocalIp():
 #   main()
 class MyDaemon(Daemon):
     def run(self):
+        global ignore_scan, ignore_scan_num
         ignore_scan = False
         ignore_scan_num = 0
         syslog.openlog('ScanDisk',syslog.LOG_PID)
