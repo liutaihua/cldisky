@@ -260,6 +260,7 @@ def getfilelist(path4scan):
 
 
 def processer(path4scan):
+    global ignore_scan
     destFile_list = getfilelist(path4scan)
 
     '''remove file from destFile_list,if the file had opened with in some program'''
@@ -274,13 +275,20 @@ def processer(path4scan):
                     os.remove(file)
                 except Exception,e:
                     syslog.syslog(e)
+                else:
+                    ignore_scan = False
             elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
                     syslog.syslog('2.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
                     syslog.syslog(e)
+                else:
+                    ignore_scan = False
+            else:
+                ignore_scan = True
     if Delete and openedFile_list and get_disk_idl() <= 3:
+        ignore_scan = True
         for file in openedFile_list:
             try:
                 syslog.syslog("Flush file: %s"%file)
@@ -305,6 +313,14 @@ class Compresser(Thread):
 
 
 def main(path='/'):
+    global ignore_scan_num
+    if ignore_scan and ignore_scan_num <= 6:
+        ignore_scan_num += 1
+        syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
+        return
+    else:
+        ignore_scan_num = 0
+
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
     _path4scan_list = []
@@ -401,6 +417,8 @@ def getLocalIp():
 #   main()
 class MyDaemon(Daemon):
     def run(self):
+        ignore_scan = False
+        ignore_scan_num = 0
         syslog.openlog('ScanDisk',syslog.LOG_PID)
         while True:
             dl = get_disk_idl()

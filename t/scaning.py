@@ -260,6 +260,7 @@ def getfilelist(path4scan):
 
 
 def processer(path4scan):
+    global ignore_scan
     destFile_list = getfilelist(path4scan)
 
     '''remove file from destFile_list,if the file had opened with in some program'''
@@ -295,7 +296,6 @@ def processer(path4scan):
                 f.flush()
                 time.sleep(1)
                 f.close()
-                scan_switch = True
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
                 continue
@@ -316,7 +316,7 @@ def main(path='/'):
     global ignore_scan_num
     if ignore_scan and ignore_scan_num <= 6:
         ignore_scan_num += 1
-        syslog.syslog("Cache last scan..., ignore scan.")
+        syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
         return
     else:
         ignore_scan_num = 0
