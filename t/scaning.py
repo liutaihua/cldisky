@@ -280,7 +280,10 @@ def processer(path4scan):
                     os.remove(file)
                 except Exception,e:
                     syslog.syslog(e)
+            else:
+                scan_switch_off = True
     if Delete and openedFile_list and get_disk_idl() <= 3:
+        scan_switch_off = True
         for file in openedFile_list:
             try:
                 syslog.syslog("Flush file: %s"%file)
@@ -288,6 +291,7 @@ def processer(path4scan):
                 f.flush()
                 time.sleep(1)
                 f.close()
+                scan_switch = True
             except Exception, e:
                 syslog.syslog("Flush file:%s break some error"%file)
                 continue
@@ -305,6 +309,8 @@ class Compresser(Thread):
 
 
 def main(path='/'):
+    if scan_switch_off:
+        return
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
     _path4scan_list = []
@@ -401,11 +407,13 @@ if __name__ == "__main__":
 #   main()
 #class MyDaemon(Daemon):
 #    def run(self):
+    scan_switch_off = False
     syslog.openlog('ScanDisk',syslog.LOG_PID)
     while True:
         dl = get_disk_idl()
         if dl < avail :
             syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+            file4compress_list = []
             main(ScanPath)
             if not Delete:
                 tar_name = time.strftime(ISOTIMEFORMAT,time.localtime())
