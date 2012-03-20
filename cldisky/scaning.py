@@ -424,7 +424,8 @@ class MyDaemon(Daemon):
         while True:
             dl = get_disk_idl()
             if dl < avail :
-                syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                if ignore_scan_num == 0:
+                    syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
                 file4compress_list = []
                 main(ScanPath)
                 if not Delete:
