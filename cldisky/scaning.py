@@ -323,20 +323,24 @@ def main(path='/'):
 
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
-    _path4scan_list = []
+    '''exclude system dir NO1'''
+    dir_list = filter(lambda x:not re_word4exclude.findall(x), dir_list)
+
+    second_dir_list = []
     path4scan_list = []
     for subdir in dir_list:
         for i in os.listdir(subdir):
             subpath = os.path.join(subdir,i)
-            if os.path.isdir(subpath):
-                _path4scan_list.append(subpath)
+            if os.path.isdir(subpath) and os.path.exists(subpath):
+                second_dir_list.append(subpath)
 
-    path4scan_subdir_lit = map(lambda x:os.listdir(x), _path4scan_list)
-
-    '''exclude the system dir'''
-    for index, root in enumerate(_path4scan_list):
-        for dir in path4scan_subdir_lit[index]:
+    '''枚举出第3层目录'''
+    third_dir_list = map(lambda x:os.listdir(x), second_dir_list)
+    for index, root in enumerate(second_dir_list):
+        for dir in third_dir_list[index]:
             path4scan_list.append(os.path.join(root,dir))
+
+    '''exclude the system dir NO2'''
     path4scan_list = filter(lambda x:not re_word4exclude.findall(x), path4scan_list)
     
     wm = WorkerManager(10)
