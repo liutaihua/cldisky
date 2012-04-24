@@ -15,6 +15,7 @@ import sys
 import syslog
 import time
 import types
+import logging
 import threading, Queue
 from threading import Thread
 import tarfile
@@ -428,7 +429,6 @@ def getLocalIp():
     return LocalIp
 
 def InitLog():
-    import logging
     logger.setLevel(logging.DEBUG)
 
     fh = logging.FileHandler("/var/log/cldisky.log")
