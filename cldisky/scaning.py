@@ -34,22 +34,6 @@ logger = logging.getLogger("/var/log/cldisky.log")
 
 
 
-def InitLog():
-    logger.setLevel(logging.DEBUG)
-
-    fh = logging.FileHandler("/var/log/cldisky.log")
-    fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    fh.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-
 '''work thread pool'''
 # working thread  
 class Worker(Thread):  
@@ -443,6 +427,21 @@ def getLocalIp():
     s.close()
     return LocalIp
 
+def InitLog():
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler("/var/log/cldisky.log")
+    fh.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
 
 '''daemon 类'''
 
@@ -454,6 +453,7 @@ class MyDaemon(Daemon):
         ignore_scan = False
         ignore_scan_num = 0
         #syslog.openlog('ScanDisk',syslog.LOG_PID)
+        InitLog()
         while True:
             dl = get_disk_idl()
             if dl < avail :
