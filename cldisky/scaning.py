@@ -428,6 +428,7 @@ def getLocalIp():
     return LocalIp
 
 def InitLog():
+    import logging
     logger.setLevel(logging.DEBUG)
 
     fh = logging.FileHandler("/var/log/cldisky.log")
