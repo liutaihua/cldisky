@@ -296,16 +296,13 @@ def processer(path4scan):
                     ignore_scan = False
             else:
                 ignore_scan = True
-    if Delete and openedFile_list and get_disk_idl() <= 3:
+    if Delete and openedFile_list and get_disk_idl() <= 2:
         ignore_scan = True
         for file in openedFile_list:
             try:
                 #syslog.syslog("Flush file: %s"%file)
                 logger.info("Flush file: %s"%file)
-                f = open(file,'w')
-                f.flush()
-                time.sleep(1)
-                f.close()
+                open(file,'w').close()
             except Exception, e:
                 #syslog.syslog("Flush file:%s break some error"%file)
                 logger.debug("Flush file:%s break some error"%file)
