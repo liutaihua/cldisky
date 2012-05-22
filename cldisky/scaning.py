@@ -379,7 +379,7 @@ def send2mail():
             logger.debug("sendEmail error: %s"%e)
 
 
-def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
+def sshCommand(host,cmd,user='root',passwd='XXXXXX',myport=58422):
     import paramiko
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -392,7 +392,7 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
     return stdout
 
 
-def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
+def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'XXXXXX',port = 58422):
     import paramiko
     ssh = paramiko.SSHClient()
     try:

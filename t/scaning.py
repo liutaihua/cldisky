@@ -15,6 +15,7 @@ import sys
 import syslog
 import time
 import types
+import logging
 import threading, Queue
 from threading import Thread
 import tarfile
@@ -30,6 +31,7 @@ from readconf import *
 threshold = 8 + avail
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
+logger = logging.getLogger("/var/log/cldisky.log")
 
 
 
@@ -102,7 +104,8 @@ def IsTxtFile(file_list, blocksize = 512):
                 tar = tarfile.TarFile.open(file)
             except Exception,e:
                 #txtfile_list.append(file)
-                syslog.syslog(e)
+                #syslog.syslog(e)
+                logger.debug("handle IsTxtFile func:%s"%e)
                 continue
             tarFileList = tar.getnames()
             allTarFile_num = len(tarFileList)
@@ -180,12 +183,14 @@ def Compress(file_list, tar_name, compression='gz'):
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
             continue
         elif get_disk_idl() < threshold :
-            syslog.syslog("tar file and to delete: %s"%tar)
+            #syslog.syslog("tar file and to delete: %s"%tar)
+            logger.info("tar file and to delete: %s"%tar)
             out.add(tar)
             try:
                 os.remove(tar)
             except OSError:
-                syslog.syslog("then rm the file:%s,is error.check user Permission.\n"%tar)
+                #syslog.syslog("then rm the file:%s,is error.check user Permission.\n"%tar)
+                logger.debug("when rm the file:%s,is error.check user Permission."%tar)
                 break
         else :
             out.close()
@@ -271,33 +276,36 @@ def processer(path4scan):
         for file in destFile_list:
             if get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
-                    syslog.syslog('1.0delete file: %s'%file)
+                    #syslog.syslog('1.0delete file: %s'%file)
+                    logger.info('1.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
-                    syslog.syslog(e)
+                    #syslog.syslog(e)
+                    logger.debug("when delete file:%s"%e)
                 else:
                     ignore_scan = False
             elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
-                    syslog.syslog('2.0delete file: %s'%file)
+                    #syslog.syslog('2.0delete file: %s'%file)
+                    logger.info('2.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
-                    syslog.syslog(e)
+                    #syslog.syslog(e)
+                    logger.debug("when 2.0 delete file:%s"%e)
                 else:
                     ignore_scan = False
             else:
                 ignore_scan = True
-    if Delete and openedFile_list and get_disk_idl() <= 3:
+    if Delete and openedFile_list and get_disk_idl() <= 2:
         ignore_scan = True
         for file in openedFile_list:
             try:
-                syslog.syslog("Flush file: %s"%file)
-                f = open(file,'w')
-                f.flush()
-                time.sleep(1)
-                f.close()
+                #syslog.syslog("Flush file: %s"%file)
+                logger.info("Flush file: %s"%file)
+                open(file,'w').close()
             except Exception, e:
-                syslog.syslog("Flush file:%s break some error"%file)
+                #syslog.syslog("Flush file:%s break some error"%file)
+                logger.debug("Flush file:%s break some error"%file)
                 continue
     if not Delete and destFile_list:
         map(lambda x:file4compress_list.append(x), [i for i in destFile_list])
@@ -316,27 +324,32 @@ def main(path='/'):
     global ignore_scan_num
     if ignore_scan and ignore_scan_num <= 3:
         ignore_scan_num += 1
-        syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
+        #syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
+        logger.info("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
         return
     else:
         ignore_scan_num = 0
 
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
-    _path4scan_list = []
+    '''exclude system dir NO1'''
+    dir_list = filter(lambda x:not re_word4exclude.findall(x), dir_list)
+
+    second_dir_list = []
     path4scan_list = []
     for subdir in dir_list:
         for i in os.listdir(subdir):
             subpath = os.path.join(subdir,i)
-            if os.path.isdir(subpath):
-                _path4scan_list.append(subpath)
+            if os.path.isdir(subpath) and os.path.exists(subpath):
+                second_dir_list.append(subpath)
 
-    path4scan_subdir_lit = map(lambda x:os.listdir(x), _path4scan_list)
-
-    '''exclude the system dir'''
-    for index, root in enumerate(_path4scan_list):
-        for dir in path4scan_subdir_lit[index]:
+    '''枚举出第3层目录'''
+    third_dir_list = map(lambda x:os.listdir(x), second_dir_list)
+    for index, root in enumerate(second_dir_list):
+        for dir in third_dir_list[index]:
             path4scan_list.append(os.path.join(root,dir))
+
+    '''exclude the system dir NO2'''
     path4scan_list = filter(lambda x:not re_word4exclude.findall(x), path4scan_list)
     
     wm = WorkerManager(10)
@@ -362,10 +375,11 @@ def send2mail():
         try:
             sendEmail(smtpServer,smtpUser,smtpPwd,fromMail,toMail)
         except Exception, e:
-            syslog.syslog("sendEmail error: %s"%e)
+            #syslog.syslog("sendEmail error: %s"%e)
+            logger.debug("sendEmail error: %s"%e)
 
 
-def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
+def sshCommand(host,cmd,user='root',passwd='XXXXXX',myport=58422):
     import paramiko
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -378,7 +392,7 @@ def sshCommand(host,cmd,user='root',passwd='WD#sd7258',myport=58422):
     return stdout
 
 
-def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port = 58422):
+def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'XXXXXX',port = 58422):
     import paramiko
     ssh = paramiko.SSHClient()
     try:
@@ -398,7 +412,8 @@ def sftpFile(host,LocalPath,RemotePath,user = 'root',passwd = 'WD#sd7258',port =
         sftp.close()
         ssh.close()
     except Exception, e:
-        syslog.syslog(e)
+        #syslog.syslog(e)
+        logger.debug("sftpFile func error:%s"%e)
         ssh.close()
 
 
@@ -410,22 +425,39 @@ def getLocalIp():
     s.close()
     return LocalIp
 
+def InitLog():
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler("/var/log/cldisky.log")
+    fh.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
 
 '''daemon 类'''
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
 #   main()
-#class MyDaemon(Daemon):
-#    def run(self):
+class MyDaemon(Daemon):
+    def run(self):
         global ignore_scan, ignore_scan_num
         ignore_scan = False
         ignore_scan_num = 0
-        syslog.openlog('ScanDisk',syslog.LOG_PID)
+        #syslog.openlog('ScanDisk',syslog.LOG_PID)
+        InitLog()
         while True:
             dl = get_disk_idl()
             if dl < avail :
                 if ignore_scan_num == 0:
-                    syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                    #syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                    logger.info('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
                 file4compress_list = []
                 main(ScanPath)
                 if not Delete:
@@ -434,7 +466,9 @@ if __name__ == "__main__":
                     TH.start()
                     while TH.isAlive():
                         time.sleep(3)
-                    syslog.syslog("tar process have to complete!@_@")
+                    #syslog.syslog("tar process have to complete!@_@")
+                    logger.info("tar process have to complete!@_@")
             else:
-                syslog.syslog("Disk Idle:%s, to sleep."%int(get_disk_idl()))
+                #syslog.syslog("Disk Idle:%s, to sleep."%int(get_disk_idl()))
+                logger.info("Disk Idle:%s, to sleep."%int(get_disk_idl()))
             time.sleep(600)
