@@ -274,7 +274,7 @@ def processer(path4scan):
 
     if Delete and destFile_list:
         for file in destFile_list:
-            if get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
+            if get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
                     #syslog.syslog('1.0delete file: %s'%file)
                     logger.info('1.0delete file: %s'%file)
@@ -284,7 +284,7 @@ def processer(path4scan):
                     logger.debug("when delete file:%s"%e)
                 else:
                     ignore_scan = False
-            elif get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
+            elif get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     #syslog.syslog('2.0delete file: %s'%file)
                     logger.info('2.0delete file: %s'%file)
