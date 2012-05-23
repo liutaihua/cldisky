@@ -13,7 +13,7 @@ else:
 try:
     intervalTime = cf.getint('general','intervalTime')
 except Exception, e:
-    intervalTime = 15
+    intervalTime = 7
 
 try:
     avail = cf.getint('general','avail')
