@@ -261,7 +261,7 @@ def getfilelist(path4scan):
 def processer(global_Filelist):
     global ignore_scan
     fileTime_dict = {}
-    destFile_list []
+    destFile_list = []
     
 
     '''remove file from destFile_list,if the file had opened with in some program'''
