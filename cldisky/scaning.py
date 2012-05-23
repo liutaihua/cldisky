@@ -236,9 +236,8 @@ def get_opened_fd():
             continue
 
 def getfilelist(path4scan):
+    global global_Filelist
     file_list = []
-    destFile_list = []
-    fileTime_dict= {}
 
     for root, dirs, files in os.walk(path4scan):
         if re_word4exclude.findall(root):continue
@@ -255,42 +254,40 @@ def getfilelist(path4scan):
     if file_list:
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
-    '''sort by time for filelist'''
-    for file in file_list:
-        fileTime_dict[file] = os.stat(file).st_mtime
-    map(lambda x:destFile_list.append(x[0]), sorted(fileTime_dict.items(),key=lambda d:d[1]))
-
-    return destFile_list
+    global_Filelist += file_list
 
 
 
-def processer(path4scan):
+def processer(global_Filelist):
     global ignore_scan
-    destFile_list = getfilelist(path4scan)
+    fileTime_dict = {}
+    destFile_list []
+    
 
     '''remove file from destFile_list,if the file had opened with in some program'''
-    openedFile_list = filter(lambda x:x in [ i for i in get_opened_fd()], destFile_list)
-    map(lambda x:destFile_list.remove(x), openedFile_list)
+    openedFile_list = filter(lambda x:x in [ i for i in get_opened_fd()], global_Filelist)
+    map(lambda x:global_Filelist.remove(x), openedFile_list)
+
+    '''sort by time for filelist'''
+    for file in global_Filelist:
+        fileTime_dict[file] = os.stat(file).st_mtime
+    map(lambda x:destFile_list.append(x[0]), sorted(fileTime_dict.items(),key=lambda d:d[1]))
 
     if Delete and destFile_list:
         for file in destFile_list:
             if get_disk_idl() < threshold and int(time.time()) - int(intervalTime)*86400 > int(os.stat(file).st_mtime):
                 try:
-                    #syslog.syslog('1.0delete file: %s'%file)
                     logger.info('1.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
-                    #syslog.syslog(e)
                     logger.debug("when delete file:%s"%e)
                 else:
                     ignore_scan = False
             elif get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
-                    #syslog.syslog('2.0delete file: %s'%file)
                     logger.info('2.0delete file: %s'%file)
                     os.remove(file)
                 except Exception,e:
-                    #syslog.syslog(e)
                     logger.debug("when 2.0 delete file:%s"%e)
                 else:
                     ignore_scan = False
@@ -322,6 +319,8 @@ class Compresser(Thread):
 
 def main(path='/'):
     global ignore_scan_num
+    global global_Filelist
+    global_Filelist = []
     if ignore_scan and ignore_scan_num <= 3:
         ignore_scan_num += 1
         #syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
@@ -354,9 +353,10 @@ def main(path='/'):
     
     wm = WorkerManager(10)
     for path4scan in path4scan_list:
-        wm.add_job(processer, path4scan)
+        wm.add_job(getfilelist, path4scan)
     wm.start()
     wm.wait_for_complete()
+    processer(global_Filelist)
    
 
 def send2sftp():
