@@ -183,13 +183,11 @@ def Compress(file_list, tar_name, compression='gz'):
         if re.match('\d{4}-\d{2}-\d{2}-\d{2}\:\d{2}\.tar\.gz',os.path.basename(tar)):
             continue
         elif get_disk_idl() < threshold :
-            #syslog.syslog("tar file and to delete: %s"%tar)
             logger.info("tar file and to delete: %s"%tar)
             out.add(tar)
             try:
                 os.remove(tar)
             except OSError:
-                #syslog.syslog("then rm the file:%s,is error.check user Permission.\n"%tar)
                 logger.debug("when rm the file:%s,is error.check user Permission."%tar)
                 break
         else :
@@ -245,12 +243,15 @@ def getfilelist(path4scan):
             fullFilePath = os.path.join(root, file)
             if os.path.exists(fullFilePath) and float(os.path.getsize(fullFilePath))/1024/1024 > size:
                 file_list.append(fullFilePath)
+
+    '''for judge file is a plain text file?'''
     if file_list:
         file_list = [ i for i in IsTxtFile(file_list)]
     else:
         #print path4scan,"is empty."
         pass
 
+    '''for judge file is match the Regular of config specified'''
     if file_list:
         file_list = filter(None, [ i for i in ReMatch(file_list)])
 
@@ -259,7 +260,7 @@ def getfilelist(path4scan):
 
 
 def processer(global_Filelist):
-    global ignore_scan
+    global IGNORE_SCAN_ACTION
     fileTime_dict = {}
     destFile_list = []
     
@@ -282,7 +283,7 @@ def processer(global_Filelist):
                 except Exception,e:
                     logger.debug("when delete file:%s"%e)
                 else:
-                    ignore_scan = False
+                    IGNORE_SCAN_ACTION = False
             elif get_disk_idl() <= 10 and int(time.time()) - 600 > int(os.stat(file).st_mtime):
                 try:
                     logger.info('2.0delete file: %s'%file)
@@ -290,18 +291,16 @@ def processer(global_Filelist):
                 except Exception,e:
                     logger.debug("when 2.0 delete file:%s"%e)
                 else:
-                    ignore_scan = False
+                    IGNORE_SCAN_ACTION = False
             else:
-                ignore_scan = True
+                IGNORE_SCAN_ACTION = True
     if Delete and openedFile_list and get_disk_idl() <= 2:
-        ignore_scan = True
+        IGNORE_SCAN_ACTION = True
         for file in openedFile_list:
             try:
-                #syslog.syslog("Flush file: %s"%file)
                 logger.info("Flush file: %s"%file)
                 open(file,'w').close()
             except Exception, e:
-                #syslog.syslog("Flush file:%s break some error"%file)
                 logger.debug("Flush file:%s break some error"%file)
                 continue
     if not Delete and destFile_list:
@@ -318,16 +317,15 @@ class Compresser(Thread):
 
 
 def main(path='/'):
-    global ignore_scan_num
+    global IGNORE_SCAN_NUM
     global global_Filelist
     global_Filelist = []
-    if ignore_scan and ignore_scan_num <= 3:
-        ignore_scan_num += 1
-        #syslog.syslog("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
-        logger.info("Cache last scan..., ignore scan Num:%s"%ignore_scan_num)
+    if IGNORE_SCAN_ACTION and IGNORE_SCAN_NUM <= 3:
+        IGNORE_SCAN_NUM += 1
+        logger.info("Cache last scan..., ignore scan Num:%s"%IGNORE_SCAN_NUM)
         return
     else:
-        ignore_scan_num = 0
+        IGNORE_SCAN_NUM = 0
 
     dir_list = filter(lambda x:os.path.isdir(x),[os.path.join(path,i) for i in os.listdir(path)])
 
@@ -348,9 +346,10 @@ def main(path='/'):
         for dir in third_dir_list[index]:
             path4scan_list.append(os.path.join(root,dir))
 
-    '''exclude the system dir NO2'''
+    '''exclude the system dir again'''
     path4scan_list = filter(lambda x:not re_word4exclude.findall(x), path4scan_list)
     
+    '''start multi threading for scan work, from above info path4scan_list'''
     wm = WorkerManager(10)
     for path4scan in path4scan_list:
         wm.add_job(getfilelist, path4scan)
@@ -447,16 +446,14 @@ def InitLog():
 #   main()
 class MyDaemon(Daemon):
     def run(self):
-        global ignore_scan, ignore_scan_num
-        ignore_scan = False
-        ignore_scan_num = 0
-        #syslog.openlog('ScanDisk',syslog.LOG_PID)
+        global IGNORE_SCAN_ACTION, IGNORE_SCAN_NUM
+        IGNORE_SCAN_ACTION = False
+        IGNORE_SCAN_NUM = 0
         InitLog()
         while True:
             dl = get_disk_idl()
             if dl < avail :
-                if ignore_scan_num == 0:
-                    #syslog.syslog('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
+                if IGNORE_SCAN_NUM == 0:
                     logger.info('1:Disk Idle:%s, Scan disk.(files %s days ago.)'%(int(dl),intervalTime))
                 file4compress_list = []
                 main(ScanPath)
@@ -466,9 +463,7 @@ class MyDaemon(Daemon):
                     TH.start()
                     while TH.isAlive():
                         time.sleep(3)
-                    #syslog.syslog("tar process have to complete!@_@")
                     logger.info("tar process have to complete!@_@")
             else:
-                #syslog.syslog("Disk Idle:%s, to sleep."%int(get_disk_idl()))
                 logger.info("Disk Idle:%s, to sleep."%int(get_disk_idl()))
             time.sleep(600)
