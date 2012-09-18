@@ -20,7 +20,7 @@ import threading, Queue
 from threading import Thread
 import tarfile
 import statvfs
-from daemon import Daemon
+from daemoned import Daemon
 from mail import *
 from readconf import *
 
