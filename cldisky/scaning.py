@@ -24,6 +24,8 @@ from daemoned import Daemon
 from mail import *
 from readconf import *
 
+from loglog import initlog
+
 
 
 
@@ -31,7 +33,7 @@ from readconf import *
 threshold = 8 + avail
 ISOTIMEFORMAT='%Y-%m-%d-%H:%M'
 re_word4exclude = re.compile("lib.*|dev|media|etc|var|proc|selinux|lost\+found|sys|srv|cdrom|run|bin|sbin|boot|share|include|man|kernel|libexec|git")
-logger = logging.getLogger("/var/log/cldisky.log")
+logger = initlog("/var/log/cldisky.log", maxlogsize=10)
 
 
 
